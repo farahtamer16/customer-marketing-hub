@@ -18,14 +18,14 @@ export default function Sidebar() {
   const accounts = useQuery(api.socialAccounts.getAccountsForUser, { userId });
 
   return (
-    <aside className="sticky top-0 z-30 hidden h-screen w-[17.5rem] shrink-0 flex-col border-e border-white/70 bg-[#eaf8f7]/85 px-5 py-6 backdrop-blur-2xl md:flex">
+    <aside className="sticky top-0 z-30 hidden h-screen w-[18rem] shrink-0 flex-col overflow-y-auto border-e border-white/70 bg-[#eaf8f7]/85 px-5 py-6 backdrop-blur-2xl md:flex">
       <BrandMark />
       <SidebarHeader />
 
       <section className="mt-8 rounded-2xl border border-white bg-white/55 p-3.5">
         <div className="flex items-center justify-between">
           <p className="text-[0.63rem] font-bold uppercase tracking-[0.17em] text-slate-400">
-            {t("accounts")}
+            {t("connectedChannels")}
           </p>
           <Link
             href="/connect/social-accounts"

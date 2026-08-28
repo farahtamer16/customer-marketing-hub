@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "Spiders AI | Social Media Marketing Hub",
-    "description": "Plan, monitor, analyze, and follow up from one focused workspace."
+    "title": "Spiders AI | Customer Growth Marketing Hub",
+    "description": "Unify social, website, CRM, product, and support signals in one customer growth workspace."
   },
   "language": {
     "label": "Language",
@@ -59,6 +59,18 @@
     "addComment": "Add comment",
     "newSchedule": "New schedule",
     "accounts": "Accounts",
+    "connectedChannels": "Connected channels",
+    "growthWorkspace": "Customer growth",
+    "growthDashboard": "Role dashboard",
+    "growthMyWorkspace": "My workspace",
+    "growthOverview": "Growth overview",
+    "growthAccounts": "B2B accounts",
+    "growthLeads": "Leads & people",
+    "growthJourneys": "Journeys",
+    "growthTeam": "Team & access",
+    "growthApprovals": "Approval queue",
+    "growthActivity": "Activity & audit",
+    "growthRevenue": "Revenue impact",
     "loadingAccounts": "Loading accounts…",
     "noAccounts": "No accounts connected.",
     "settings": "Profile settings",
@@ -437,5 +449,672 @@
     "updatingPhoto": "Updating photo…",
     "securedBy": "Secured by Clerk",
     "securityDescription": "Sensitive changes require your current password and are processed through protected API routes."
+  },
+  "growth": {
+    "demo": {
+      "label": "Interactive frontend concept",
+      "description": "Customer-growth records are demo data until website, CRM, product, and support connectors are implemented."
+    },
+    "connectedSignal": "Connected social signal",
+    "overview": {
+      "eyebrow": "Customer growth command center",
+      "title": "Turn every customer signal into growth",
+      "description": "Unify acquisition, buying-group intent, product adoption, and retention into one account-centered workspace.",
+      "viewAccounts": "View accounts",
+      "accountJourney": "Account journey pipeline",
+      "accountJourneyHint": "Companies move as buying groups—not as isolated leads.",
+      "openJourney": "Open journey view",
+      "accountCount": "{count, plural, =0 {No accounts} =1 {1 account} other {# accounts}}",
+      "prioritizedAccounts": "Accounts to act on now",
+      "owner": "Owner: {name}",
+      "unifiedData": "Unified customer data",
+      "oneCustomerView": "One account. Every signal.",
+      "oneCustomerViewHint": "Website, campaign, social, email, CRM, product, and support activity roll into the same account profile.",
+      "latestSignals": "Latest growth signals"
+    },
+    "metrics": {
+      "acquisitionCost": "Customer acquisition cost",
+      "salesCycle": "Median sales cycle",
+      "activationRate": "Account activation rate",
+      "influencedPipeline": "Influenced pipeline",
+      "down": "↓ {value}%",
+      "up": "+{value}%",
+      "faster": "{value} days faster",
+      "days": "{value} days"
+    },
+    "stages": {
+      "discover": "Discover",
+      "engaged": "Engaged",
+      "demo": "Demo",
+      "trial": "Trial",
+      "activated": "Activated",
+      "customer": "Customer",
+      "renewal": "Renewal"
+    },
+    "sources": {
+      "website": "Website",
+      "campaign": "Campaign",
+      "social": "Social",
+      "email": "Email",
+      "crm": "CRM",
+      "product": "Product",
+      "support": "Support"
+    },
+    "scores": {
+      "intent": "Intent score",
+      "engagement": "Engagement score",
+      "adoption": "Adoption score",
+      "coverage": "Buying-group coverage"
+    },
+    "signals": {
+      "pricingVisit": "Visited the pricing or enterprise page",
+      "socialQuestion": "Asked a product question on social media",
+      "campaignClick": "Engaged with a campaign",
+      "demoRequested": "Requested a product demo",
+      "trialStarted": "Started a product trial",
+      "postCreated": "Created or published a social post",
+      "teamInvited": "Invited teammates into the workspace",
+      "supportOpened": "Opened a support issue",
+      "supportResolved": "Support issue was resolved",
+      "renewalViewed": "Entered the renewal window"
+    },
+    "actions": {
+      "bookExecutiveDemo": "Book an executive workflow demo",
+      "shareSecurityGuide": "Share the security and compliance guide",
+      "inviteSecondAdmin": "Invite and activate a second workspace admin",
+      "resolveSupportBlocker": "Resolve the active support blocker",
+      "launchRenewalReview": "Launch a renewal health review"
+    },
+    "actionReasons": {
+      "bookExecutiveDemo": "High intent, an active champion, and a recent demo request make this account ready for a coordinated sales handoff.",
+      "shareSecurityGuide": "The account is engaged but technical coverage is missing. Answering security questions should unblock the next stage.",
+      "inviteSecondAdmin": "The trial is active, but adoption depends on more than one user reaching the value moment.",
+      "resolveSupportBlocker": "Adoption is strong, but an unresolved support signal may slow activation and damage retention.",
+      "launchRenewalReview": "Usage has declined inside the renewal window. Review outcomes, blockers, and expansion opportunities now."
+    },
+    "roles": {
+      "decisionMaker": "Decision-maker",
+      "champion": "Champion",
+      "user": "User",
+      "technicalEvaluator": "Technical evaluator"
+    },
+    "workspaceRoles": {
+      "ownerAdmin": "Owner / admin",
+      "cmo": "CMO / executive",
+      "marketingManager": "Marketing manager",
+      "socialMediaUser": "Social media user",
+      "socialMediaManager": "Social media manager",
+      "sales": "Sales",
+      "customerSuccess": "Customer success",
+      "support": "Support"
+    },
+    "permissions": {
+      "manageWorkspace": "Manage workspace",
+      "manageTeam": "Manage team",
+      "connectData": "Connect data",
+      "viewExecutiveAnalytics": "Executive analytics",
+      "manageCampaigns": "Manage campaigns",
+      "publishContent": "Publish content",
+      "manageLeads": "Manage leads",
+      "manageCustomerSuccess": "Manage customer success",
+      "handleSupport": "Handle support"
+    },
+    "team": {
+      "eyebrow": "Organization administration",
+      "title": "Team and workspace access",
+      "description": "Separate internal workspace access from customer buying-group roles, then give each teammate the tools and information required for their job.",
+      "previewRoles": "Preview role views",
+      "invite": "Invite teammate",
+      "totalMembers": "Workspace members",
+      "activeMembers": "Active members",
+      "pendingInvites": "Pending invitations",
+      "workspaceRoles": "Defined roles",
+      "tableTitle": "Organization members",
+      "results": "Showing {count} of {total}",
+      "search": "Search name or email…",
+      "clear": "Clear filters",
+      "member": "Member",
+      "role": "Workspace role",
+      "status": "Status",
+      "lastActive": "Last active",
+      "awaitingAcceptance": "Awaiting acceptance",
+      "allRoles": "All roles",
+      "allStatuses": "All statuses",
+      "empty": "No members match these filters.",
+      "permissionMatrix": "Role and permission matrix",
+      "permissionMatrixHint": "A frontend policy proposal showing the access each role should receive.",
+      "allowed": "Allowed",
+      "notAllowed": "Not allowed",
+      "frontendNotice": "Frontend access preview—not security enforcement",
+      "frontendNoticeDescription": "These screens explain the intended access model. Real protection must be checked by the backend on every protected query, mutation, and API request.",
+      "inviteTitle": "Invite a teammate",
+      "inviteDescription": "Assign the person a starting workspace role.",
+      "name": "Full name",
+      "namePlaceholder": "Enter the teammate’s name",
+      "email": "Work email",
+      "inviteDemoHint": "This prototype adds the invitation locally for demonstration. It does not send an email or create an account.",
+      "close": "Close invitation dialog",
+      "cancel": "Cancel",
+      "sendInvite": "Add demo invitation",
+      "statuses": {
+        "active": "Active",
+        "invited": "Invited",
+        "suspended": "Suspended"
+      }
+    },
+    "roleDescriptions": {
+      "ownerAdmin": "Controls organization settings, data connections, members, roles, and all growth operations.",
+      "cmo": "Reviews acquisition cost, pipeline, conversion, retention, and lifetime value without operational clutter.",
+      "marketingManager": "Runs campaigns, coordinates journeys, qualifies accounts, and manages approvals and activation programs.",
+      "socialMediaUser": "Manages daily social interactions, creates and schedules posts, tags contacts, and flags high-intent conversations.",
+      "socialMediaManager": "Creates and schedules content, manages comments, and monitors channel-level engagement.",
+      "sales": "Works high-intent accounts, buying groups, demos, pipeline, and recommended commercial actions.",
+      "customerSuccess": "Guides activation, adoption, account health, expansion, and renewal after the sales handoff.",
+      "support": "Resolves customer blockers and surfaces service signals that may affect activation, health, or renewal."
+    },
+    "roleDashboards": {
+      "accessDenied": {
+        "title": "Access denied",
+        "description": "This dashboard is not available for the current workspace role."
+      },
+      "admin": {
+        "eyebrow": "Full control",
+        "title": "Admin dashboard",
+        "description": "Manage workspace users and roles, and review system activity.",
+        "accessLevel": "Administrator access",
+        "accessDescription": "Full control for user management, role assignment, system configuration, and audit logs.",
+        "manageUsers": "Manage users and roles",
+        "manageUsersDescription": "Invite members, assign one of the four dashboard roles, and review access.",
+        "systemLogs": "View system logs",
+        "systemLogsDescription": "Review important workspace, access, and configuration events.",
+        "usersAndRoles": "Users and assigned roles",
+        "recentLogs": "Recent system logs"
+      },
+      "cmo": {
+        "eyebrow": "Executive read-only view",
+        "title": "CMO dashboard",
+        "description": "Monitor account readiness, pipeline, conversion, campaign ROI, lifetime value, and executive alerts.",
+        "accessLevel": "Executive access",
+        "accessDescription": "Read-only analytics with no operational or publishing actions.",
+        "accountScores": "Overall account scores",
+        "accountScoresDescription": "Average intent across the active account portfolio.",
+        "pipeline": "Pipeline",
+        "pipelineDescription": "Total active account pipeline.",
+        "conversion": "Conversion",
+        "conversionDescription": "Tracked accounts converted to customers.",
+        "campaignRoi": "Campaign ROI",
+        "campaignRoiDescription": "Pipeline return compared with tracked campaign spend.",
+        "accountLtv": "Account LTV",
+        "accountLtvDescription": "Combined projected lifetime value.",
+        "accountPortfolio": "Account scores and lifetime value",
+        "executiveAlerts": "Executive alerts",
+        "ltv": "Projected LTV"
+      },
+      "marketing_manager": {
+        "eyebrow": "Operational growth view",
+        "title": "Marketing manager dashboard",
+        "description": "Prioritize scored accounts and leads, coordinate journeys, and manage nurture campaigns.",
+        "accessLevel": "Marketing manager access",
+        "accessDescription": "Can view accounts, filter journeys, review scores and recommendations, prioritize leads, and run campaigns.",
+        "prioritizeLeads": "Prioritize leads",
+        "prioritizeLeadsDescription": "Focus the team on the people with the strongest buying signals.",
+        "recommendedActions": "Recommended next actions",
+        "recommendedActionsDescription": "Use account context to choose the next coordinated step.",
+        "nurtureCampaigns": "Manage nurture campaigns",
+        "nurtureCampaignsDescription": "Coordinate campaign activity for accounts that are not ready to convert.",
+        "scoredAccounts": "Account list with scores",
+        "results": "Showing {count} of {total}",
+        "search": "Search account or industry…",
+        "clear": "Clear filters",
+        "account": "Account",
+        "accounts": "accounts",
+        "journeyStage": "Journey stage",
+        "allStages": "All stages",
+        "scoreBreakdown": "Score breakdown",
+        "nextAction": "Recommended next action",
+        "empty": "No accounts match these filters.",
+        "priorityLeadList": "Priority leads",
+        "activeNurtureCampaigns": "Nurture campaigns",
+        "campaignPipeline": "${value, number, ::currency/USD compact-short} influenced pipeline"
+      },
+      "social_media_user": {
+        "eyebrow": "Tactical social workspace",
+        "title": "Social media user dashboard",
+        "description": "Manage daily social content and interactions across connected channels.",
+        "accessLevel": "Social media user access",
+        "accessDescription": "Tactical access for social conversations, content creation, scheduling, tagging, and intent flags.",
+        "capabilities": {
+          "monitor": {
+            "title": "Monitor comments and DMs",
+            "description": "Review incoming conversations from connected social channels."
+          },
+          "createSchedule": {
+            "title": "Create and schedule posts",
+            "description": "Prepare content and select when it should publish."
+          },
+          "reply": {
+            "title": "Reply to comments and DMs",
+            "description": "Continue customer conversations from the social inbox."
+          },
+          "tag": {
+            "title": "Tag contacts and accounts",
+            "description": "Attach an interaction to the correct person or buying account."
+          },
+          "flagIntent": {
+            "title": "Flag high-intent interactions",
+            "description": "Escalate conversations that show meaningful buying intent."
+          }
+        }
+      }
+    },
+    "roleViews": {
+      "back": "Back to team and access",
+      "eyebrow": "Role-based workspace",
+      "title": "What each teammate sees",
+      "description": "Preview focused dashboard experiences for administrators, executives, marketers, social teams, sales, and support.",
+      "previewLabel": "Dashboard preview",
+      "visibleCapabilities": "Visible capabilities",
+      "accessSummary": "Access summary",
+      "accessSummaryHint": "Select a role to compare its workspace scope.",
+      "permissionCount": "{count, plural, =1 {1 permission} other {# permissions}}",
+      "internalJourney": "Internal workspace journey",
+      "internalJourneyHint": "How your own organization goes from workspace creation to coordinated customer-growth operations.",
+      "compareCustomerJourney": "Compare customer journey",
+      "metrics": {
+        "members": "Members",
+        "dataSources": "Connected sources",
+        "pendingInvites": "Pending invitations",
+        "pipeline": "Influenced pipeline",
+        "cac": "Acquisition cost",
+        "retention": "Retention",
+        "campaigns": "Active campaigns",
+        "qualifiedAccounts": "Qualified accounts",
+        "activation": "Activation",
+        "scheduledPosts": "Scheduled posts",
+        "engagement": "Engagements",
+        "newComments": "New comments",
+        "highIntent": "High-intent accounts",
+        "demos": "Upcoming demos",
+        "activatedAccounts": "Activated accounts",
+        "adoption": "Adoption",
+        "renewals": "Upcoming renewals",
+        "openTickets": "Open tickets",
+        "atRiskAccounts": "At-risk accounts",
+        "health": "Customer health"
+      }
+    },
+    "workspaceJourney": {
+      "workspaceCreated": "Workspace created",
+      "dataConnected": "Data sources connected",
+      "teamInvited": "Team invited",
+      "permissionsAssigned": "Access assigned",
+      "firstCampaign": "First campaign launched",
+      "growthOperations": "Growth operations active"
+    },
+    "workspaceJourneyHints": {
+      "workspaceCreated": "The owner establishes the company workspace and operating goals.",
+      "dataConnected": "Social, website, CRM, product, and support sources are connected.",
+      "teamInvited": "Executives, marketers, sales, social, and support teammates join.",
+      "permissionsAssigned": "Each teammate receives the minimum access needed for their role.",
+      "firstCampaign": "The team launches a coordinated campaign and tracks account signals.",
+      "growthOperations": "Teams act together across acquisition, activation, retention, and renewal."
+    },
+    "approvalStatuses": {
+      "draft": "Draft",
+      "pending": "Needs approval",
+      "changesRequested": "Changes requested",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "scheduled": "Scheduled",
+      "published": "Published"
+    },
+    "workspaceHome": {
+      "eyebrow": "Role-based operations",
+      "title": "My growth workspace",
+      "description": "Give every teammate a focused queue, the right tools, and a clear handoff to the next role.",
+      "notifications": "{count, plural, =0 {No new notifications} =1 {1 new notification} other {# new notifications}}",
+      "previewAs": "Preview workspace as",
+      "myQueue": "My priority queue",
+      "queueClear": "Nothing requires this role right now.",
+      "operatingFlow": "Shared operating flow",
+      "operatingFlowTitle": "Create, approve, then learn",
+      "today": "Today",
+      "pendingApprovals": "Pending approvals",
+      "unreadSignals": "Unread signals",
+      "availableTools": "Available tools for this role",
+      "compareRoles": "Compare every role",
+      "urgency": {
+        "now": "Act now",
+        "today": "Today",
+        "thisWeek": "This week"
+      },
+      "flow": {
+        "create": "Create",
+        "approve": "Approve",
+        "measure": "Measure"
+      },
+      "modules": {
+        "adminSetup": "Admin setup",
+        "teamAccess": "Team and access",
+        "growthAnalytics": "Growth analytics",
+        "approvalQueue": "Approval queue",
+        "content": "Posts and content",
+        "accountsLeads": "Accounts and leads",
+        "customerSuccess": "Customer success",
+        "supportSignals": "Support signals"
+      }
+    },
+    "workItems": {
+      "work-setup": {
+        "title": "Complete approval policy",
+        "detail": "Define which content needs manager or executive review."
+      },
+      "work-executive": {
+        "title": "Approve product launch",
+        "detail": "The scheduled campaign is waiting on final executive review."
+      },
+      "work-queue": {
+        "title": "Review the approval queue",
+        "detail": "Two posts require marketing review or revision follow-up."
+      },
+      "work-revise": {
+        "title": "Revise customer story",
+        "detail": "Add the approved quote and resubmit for manager review."
+      },
+      "work-account": {
+        "title": "Contact Northstar Retail",
+        "detail": "Intent is 91 and the buying group requested a demonstration."
+      },
+      "work-success": {
+        "title": "Review Crescent Labs adoption",
+        "detail": "Trial engagement is strong; guide the team to its next value moment."
+      },
+      "work-support": {
+        "title": "Resolve Namaa Health blocker",
+        "detail": "A channel connection problem may delay activation."
+      }
+    },
+    "setup": {
+      "back": "Back to my workspace",
+      "eyebrow": "Administrator onboarding",
+      "title": "Configure the growth workspace",
+      "description": "Connect the organization, data, teammates, access rules, and approval policy before operations begin.",
+      "steps": {
+        "organization": "Organization",
+        "data": "Data",
+        "team": "Team",
+        "access": "Access",
+        "approvals": "Approvals"
+      },
+      "organizationTitle": "Create the organization workspace",
+      "organizationDescription": "This becomes the internal home for marketing, sales, social, support, and leadership.",
+      "organizationName": "Organization name",
+      "dataTitle": "Connect customer and campaign signals",
+      "dataDescription": "Choose the sources that will eventually feed account intent, adoption, service, and revenue context.",
+      "teamTitle": "Invite the operating team",
+      "teamDescription": "Internal workspace roles control what your own teammates see and do.",
+      "manageTeam": "Open team management",
+      "accessTitle": "Review least-privilege access",
+      "accessDescription": "Start each teammate with only the capabilities needed for their responsibilities.",
+      "permissionCount": "{count, plural, =1 {1 permission} other {# permissions}}",
+      "approvalTitle": "Configure content approval policy",
+      "approvalDescription": "Route routine work efficiently and reserve executive review for sensitive or strategic content.",
+      "previous": "Previous",
+      "next": "Next",
+      "finish": "Finish setup",
+      "completeTitle": "Workspace setup is ready",
+      "completeDescription": "{organization} now has a proposed operating model for data, roles, and approvals.",
+      "openWorkspace": "Open my workspace",
+      "reviewSetup": "Review setup",
+      "sources": {
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "website": "Website",
+        "crm": "CRM",
+        "product": "Product usage",
+        "support": "Support"
+      },
+      "rules": {
+        "socialNeedsManager": "Social posts require marketing-manager approval",
+        "highRiskNeedsCmo": "High-risk campaigns require CMO approval",
+        "managerCanPublish": "Marketing managers can publish routine content",
+        "blockUnapprovedSchedule": "Unapproved posts cannot publish at the scheduled time"
+      },
+      "ruleHints": {
+        "socialNeedsManager": "Social authors submit drafts to the marketing approval queue.",
+        "highRiskNeedsCmo": "Strategic, sensitive, or major-budget content adds a final executive step.",
+        "managerCanPublish": "Routine content can move directly from manager approval to scheduling.",
+        "blockUnapprovedSchedule": "Late approval keeps the post in the queue instead of publishing it automatically."
+      }
+    },
+    "approvals": {
+      "eyebrow": "Content governance",
+      "title": "Approval queue",
+      "description": "Review outgoing social content, request revisions, and move approved work safely into the publishing calendar.",
+      "total": "Tracked submissions",
+      "pending": "Waiting for review",
+      "changes": "Changes requested",
+      "approved": "Approved",
+      "tableTitle": "Content workflow",
+      "results": "Showing {count} of {total}",
+      "search": "Search campaign, author, or content…",
+      "clear": "Clear filters",
+      "post": "Post and campaign",
+      "author": "Author",
+      "channel": "Channels",
+      "status": "Workflow status",
+      "submitted": "Submitted",
+      "allStatuses": "All statuses",
+      "allChannels": "All channels",
+      "empty": "No submissions match these filters.",
+      "open": "Review {campaign}",
+      "channels": {
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      }
+    },
+    "approvalReview": {
+      "back": "Back to approval queue",
+      "highPriority": "High priority",
+      "by": "Created by {author}",
+      "scheduledFor": "Scheduled for",
+      "notScheduled": "Not scheduled",
+      "postPreview": "Channel preview",
+      "previewTime": "Preview · just now",
+      "creativePlaceholder": "Campaign creative preview",
+      "like": "Like",
+      "comment": "Comment",
+      "share": "Share",
+      "workflow": "Approval workflow",
+      "decision": "Review decision",
+      "decisionHint": "This prototype updates the review state locally and records the action below.",
+      "approve": "Approve",
+      "requestChanges": "Request changes",
+      "reject": "Reject",
+      "note": "Internal review note",
+      "notePlaceholder": "Explain the decision or requested revision…",
+      "cancel": "Cancel",
+      "confirm": "Confirm decision",
+      "resetDemo": "Reset prototype decision",
+      "activity": "Approval activity",
+      "demoReviewer": "Demo reviewer"
+    },
+    "approvalSteps": {
+      "waiting": "Waiting",
+      "current": "Reviewing",
+      "approved": "Approved",
+      "rejected": "Returned"
+    },
+    "approvalActions": {
+      "created": "created the post",
+      "submitted": "submitted it for approval",
+      "approved": "approved the post",
+      "rejected": "rejected the post",
+      "changesRequested": "requested changes",
+      "commented": "added an internal comment"
+    },
+    "activity": {
+      "eyebrow": "Workspace operations",
+      "title": "Notifications and audit history",
+      "description": "Keep work moving with role-specific alerts and maintain a clear record of access, workflow, and integration changes.",
+      "markAllRead": "Mark all as read",
+      "notifications": "Notifications",
+      "inbox": "{count, plural, =0 {You’re all caught up} =1 {1 unread item} other {# unread items}}",
+      "auditTitle": "Audit history",
+      "auditHint": "A reviewable record of important workspace changes.",
+      "actor": "Actor",
+      "action": "Action",
+      "target": "Target",
+      "time": "Time",
+      "empty": "No audit activity yet."
+    },
+    "notificationData": {
+      "notification-approval": {
+        "title": "Product launch needs executive approval",
+        "detail": "Marketing approved it. CMO review is the final step."
+      },
+      "notification-signal": {
+        "title": "Northstar Retail intent reached 91",
+        "detail": "A decision-maker requested a workflow demonstration."
+      },
+      "notification-support": {
+        "title": "Activation blocker opened for Namaa Health",
+        "detail": "Instagram connection failure may delay team activation."
+      },
+      "notification-system": {
+        "title": "CRM connection completed",
+        "detail": "Account and lead signals are ready for mapping."
+      }
+    },
+    "auditActions": {
+      "roleChanged": "Changed a workspace role",
+      "integrationConnected": "Connected an integration",
+      "approvalRuleChanged": "Updated an approval rule",
+      "postApproved": "Approved a post",
+      "memberInvited": "Invited a teammate"
+    },
+    "tiers": {
+      "enterprise": "Enterprise",
+      "midMarket": "Mid-market",
+      "smallBusiness": "Small business"
+    },
+    "intent": {
+      "high": "High intent",
+      "medium": "Medium intent",
+      "low": "Low intent"
+    },
+    "accounts": {
+      "eyebrow": "B2B growth",
+      "title": "Accounts",
+      "description": "Prioritize companies by buying-group readiness, intent, engagement, adoption, and revenue potential.",
+      "tableTitle": "Account portfolio",
+      "results": "Showing {count} of {total}",
+      "search": "Search company, domain, or industry…",
+      "clear": "Clear filters",
+      "allStages": "All stages",
+      "allTiers": "All tiers",
+      "account": "Buying account",
+      "stage": "Journey stage",
+      "coverage": "Group coverage",
+      "pipeline": "Pipeline",
+      "tier": "Account tier",
+      "empty": "No accounts match these filters.",
+      "open": "Open {name} account"
+    },
+    "accountDetail": {
+      "back": "Back to accounts",
+      "owner": "Account owner",
+      "companySize": "Employees",
+      "knownPeople": "Known people",
+      "projectedLtv": "Projected LTV",
+      "journey": "First visit to renewal",
+      "journeyHint": "A unified timeline of website, campaign, social, CRM, product, and support activity.",
+      "viewSocial": "View social posts",
+      "nextBestAction": "Recommended next action",
+      "createAction": "Create growth action",
+      "buyingGroup": "Buying group",
+      "accountVsPeople": "The company is the account; these people influence or use the product."
+    },
+    "leads": {
+      "eyebrow": "People intelligence",
+      "title": "Leads and decision-makers",
+      "description": "Score individuals without losing the account, role, and buying-group context around them.",
+      "tableTitle": "Known people",
+      "results": "Showing {count} of {total}",
+      "search": "Search person, title, or account…",
+      "clear": "Clear filters",
+      "person": "Person",
+      "account": "Account",
+      "role": "Buying role",
+      "leadScore": "Lead score",
+      "buyLikelihood": "Buy likelihood",
+      "latestSource": "Latest source",
+      "nextAction": "Recommended action",
+      "allIntent": "All intent levels",
+      "allSources": "All sources",
+      "empty": "No people match these filters.",
+      "open": "Open {name} account context"
+    },
+    "journeys": {
+      "eyebrow": "Lifecycle orchestration",
+      "title": "Customer journeys",
+      "description": "Compare person-led consumer journeys with account-led B2B journeys and coordinate the next action across teams.",
+      "b2b": "B2B account journey",
+      "consumer": "Consumer journey",
+      "adminView": "Admin journey view",
+      "b2bTitle": "The account advances when the buying group is ready",
+      "b2bExplanation": "The CMO, champion, daily user, and technical evaluator can move non-linearly. Their signals combine into account readiness.",
+      "consumerTitle": "One person moves through a direct lifecycle",
+      "consumerExplanation": "A consumer journey follows one identity from the first website visit through conversion, activation, and retention.",
+      "recommendedAction": "Sales action",
+      "recommendedReason": "Northstar Retail has high intent, three engaged buying roles, and a recent demo request.",
+      "reviewAccount": "Review Northstar",
+      "supportAction": "Support action",
+      "supportReason": "Namaa Health is highly adopted, but an active connection issue could delay full activation.",
+      "openSupportContext": "Open support context",
+      "stageHints": {
+        "discover": "Anonymous account activity",
+        "engaged": "Known people and intent",
+        "demo": "Buying group qualification",
+        "trial": "Product evaluation",
+        "activated": "Value moment reached",
+        "customer": "Revenue and expansion",
+        "renewal": "Health and retention"
+      },
+      "consumerStages": {
+        "firstVisit": "First visit",
+        "contentEngaged": "Content engaged",
+        "signedUp": "Signed up",
+        "activated": "Activated",
+        "retained": "Retained"
+      },
+      "consumerHints": {
+        "firstVisit": "Capture source, campaign, and high-intent pages.",
+        "contentEngaged": "Use social, email, and website behavior to personalize the next message.",
+        "signedUp": "Connect the anonymous journey to the known user profile.",
+        "activated": "Guide the user to the first meaningful product outcome.",
+        "retained": "Monitor repeated value, support needs, and churn signals."
+      }
+    },
+    "revenue": {
+      "eyebrow": "Revenue intelligence",
+      "title": "Campaign to customer impact",
+      "description": "Connect spend and engagement to pipeline, conversion, activation, retention, and customer lifetime value.",
+      "pipeline": "Campaign-influenced pipeline",
+      "conversion": "Account-to-customer conversion",
+      "retention": "Customer retention",
+      "ltv": "Projected customer LTV",
+      "campaignImpact": "Campaign impact",
+      "campaignImpactHint": "Pipeline contribution by connected acquisition and lifecycle programs.",
+      "campaignSummary": "{accounts} accounts · {customers} customers · {retained} retained",
+      "efficiency": "Growth efficiency",
+      "pipelinePerDollar": "Pipeline generated for every marketing dollar",
+      "totalSpend": "Tracked spend",
+      "newCustomers": "New customers",
+      "outcomes": "Business outcomes",
+      "lowerCac": "Lower acquisition cost",
+      "shorterCycle": "Shorter sales cycle",
+      "activation": "Improved activation"
+    }
   }
 }
