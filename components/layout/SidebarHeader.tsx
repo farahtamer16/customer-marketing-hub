@@ -11,6 +11,8 @@ import {
   FileText,
   Gauge,
   Calendar,
+  ListChecks,
+  LineChart,
   MessageSquareText,
   Plus,
   Route,
@@ -30,9 +32,11 @@ const growthIcons = {
   growthRevenue: BarChart3,
   growthLeads: UsersRound,
   growthJourneys: Route,
+  growthApprovals: ListChecks,
   posts: FileText,
   calendar: CalendarDays,
   comments: MessageSquareText,
+  analytics: LineChart,
 };
 
 export default function SidebarHeader() {
