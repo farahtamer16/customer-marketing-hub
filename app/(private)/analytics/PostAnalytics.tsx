@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AnalyticsRow } from "./AnalyticsOverview";
 
 export default function PostAnalytics({ rows }: { rows: AnalyticsRow[] }) {
@@ -11,9 +12,11 @@ export default function PostAnalytics({ rows }: { rows: AnalyticsRow[] }) {
           <span>Shares</span>
         </div>
         {rows.map(({ post, analytics }) => (
-          <div
+          <Link
             key={post._id}
-            className="grid grid-cols-[2fr_repeat(3,1fr)] px-6 py-4 text-sm text-slate-600 odd:bg-white/35"
+            href={`/posts/${post._id}`}
+            className="grid grid-cols-[2fr_repeat(3,1fr)] px-6 py-4 text-sm text-slate-600 odd:bg-white/35 hover:bg-blue-50/50"
+            title="Open this post to refresh its analytics"
           >
             <span className="truncate pr-5 font-semibold text-[#173b9a]">
               {post.content}
@@ -21,7 +24,7 @@ export default function PostAnalytics({ rows }: { rows: AnalyticsRow[] }) {
             <span>{(analytics?.likes ?? 0).toLocaleString()}</span>
             <span>{(analytics?.comments ?? 0).toLocaleString()}</span>
             <span>{(analytics?.shares ?? 0).toLocaleString()}</span>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

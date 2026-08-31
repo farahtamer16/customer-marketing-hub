@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AnalyticsRow } from "./AnalyticsOverview";
 
 function engagement(analytics: AnalyticsRow["analytics"]) {
@@ -23,9 +24,11 @@ export default function Chart({ rows }: { rows: AnalyticsRow[] }) {
             ? Math.max((total / max) * 100, total ? 4 : 0)
             : 0;
           return (
-            <div
+            <Link
               key={post._id}
-              className="grid gap-3 sm:grid-cols-[10rem_1fr_5rem] sm:items-center"
+              href={`/posts/${post._id}`}
+              className="grid gap-3 rounded-xl sm:grid-cols-[10rem_1fr_5rem] sm:items-center hover:bg-blue-50/40"
+              title="Open this post to refresh its analytics"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-700">
@@ -46,7 +49,7 @@ export default function Chart({ rows }: { rows: AnalyticsRow[] }) {
               <p className="text-right text-sm font-semibold">
                 {total.toLocaleString()}
               </p>
-            </div>
+            </Link>
           );
         })}
       </div>
