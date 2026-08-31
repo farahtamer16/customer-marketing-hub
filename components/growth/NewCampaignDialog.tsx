@@ -1,0 +1,237 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useMutation } from "convex/react";
+import { Megaphone, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { api } from "@/convex/_generated/api";
+import { signalSources } from "@/lib/growth-data";
+import type { SignalSource } from "@/types/growth";
+
+export default function NewCampaignDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const t = useTranslations("growth");
+  const createCampaign = useMutation(api.campaigns.createCampaign);
+  const [name, setName] = useState("");
+  const [channel, setChannel] = useState<SignalSource>("social");
+  const [spend, setSpend] = useState("");
+  const [accounts, setAccounts] = useState("");
+  const [opportunities, setOpportunities] = useState("");
+  const [pipeline, setPipeline] = useState("");
+  const [customers, setCustomers] = useState("");
+  const [retained, setRetained] = useState("");
+  const [ltv, setLtv] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const valid = name.trim().length >= 2;
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose, open]);
+
+  if (!open) return null;
+
+  const reset = () => {
+    setName("");
+    setChannel("social");
+    setSpend("");
+    setAccounts("");
+    setOpportunities("");
+    setPipeline("");
+    setCustomers("");
+    setRetained("");
+    setLtv("");
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    try {
+      await createCampaign({
+        name: name.trim(),
+        channel,
+        spend: Number(spend) || 0,
+        accounts: Number(accounts) || 0,
+        opportunities: Number(opportunities) || 0,
+        pipeline: Number(pipeline) || 0,
+        customers: Number(customers) || 0,
+        retained: Number(retained) || 0,
+        ltv: Number(ltv) || 0,
+      });
+      reset();
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("revenue.createFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-sm"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-campaign-title"
+        className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+          <div className="flex gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-[#3156dc]">
+              <Megaphone size={20} />
+            </span>
+            <div>
+              <h2 id="new-campaign-title" className="font-semibold text-[#071e55]">
+                {t("revenue.newCampaignTitle")}
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {t("revenue.newCampaignDescription")}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label={t("revenue.cancel")}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={submit} className="max-h-[70vh] space-y-4 overflow-y-auto p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.name")}
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.channel")}
+              <select
+                value={channel}
+                onChange={(event) => setChannel(event.target.value as SignalSource)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              >
+                {signalSources.map((value) => (
+                  <option key={value} value={value}>
+                    {t(`sources.${value}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.spend")}
+              <input
+                type="number"
+                min={0}
+                value={spend}
+                onChange={(event) => setSpend(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.accountsReached")}
+              <input
+                type="number"
+                min={0}
+                value={accounts}
+                onChange={(event) => setAccounts(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.opportunities")}
+              <input
+                type="number"
+                min={0}
+                value={opportunities}
+                onChange={(event) => setOpportunities(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.pipelineValue")}
+              <input
+                type="number"
+                min={0}
+                value={pipeline}
+                onChange={(event) => setPipeline(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.customers")}
+              <input
+                type="number"
+                min={0}
+                value={customers}
+                onChange={(event) => setCustomers(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.retained")}
+              <input
+                type="number"
+                min={0}
+                value={retained}
+                onChange={(event) => setRetained(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+          </div>
+          <label className="block text-sm font-semibold text-slate-700">
+            {t("revenue.ltvValue")}
+            <input
+              type="number"
+              min={0}
+              value={ltv}
+              onChange={(event) => setLtv(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </label>
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            >
+              {t("revenue.cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={!valid || submitting}
+              className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("revenue.create")}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}

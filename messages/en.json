@@ -1019,7 +1019,20 @@
       "pipeline": "Pipeline",
       "tier": "Account tier",
       "empty": "No accounts match these filters.",
-      "open": "Open {name} account"
+      "open": "Open {name} account",
+      "newAccount": "New account",
+      "newAccountTitle": "Add an account",
+      "newAccountDescription": "Track a new company in your growth pipeline.",
+      "name": "Company name",
+      "domain": "Domain",
+      "industry": "Industry",
+      "employees": "Employees",
+      "owner": "Owner",
+      "pipelineValue": "Pipeline value ($)",
+      "ltv": "Projected LTV ($)",
+      "cancel": "Cancel",
+      "create": "Add account",
+      "createFailed": "Failed to add account"
     },
     "accountDetail": {
       "back": "Back to accounts",
@@ -1114,7 +1127,22 @@
       "outcomes": "Business outcomes",
       "lowerCac": "Lower acquisition cost",
       "shorterCycle": "Shorter sales cycle",
-      "activation": "Improved activation"
+      "activation": "Improved activation",
+      "newCampaign": "New campaign",
+      "newCampaignTitle": "Add a campaign",
+      "newCampaignDescription": "Track spend and pipeline impact for a new acquisition or lifecycle program.",
+      "name": "Campaign name",
+      "channel": "Channel",
+      "spend": "Spend ($)",
+      "accountsReached": "Accounts reached",
+      "opportunities": "Opportunities",
+      "pipelineValue": "Pipeline value ($)",
+      "customers": "Customers won",
+      "retained": "Customers retained",
+      "ltvValue": "Projected LTV ($)",
+      "cancel": "Cancel",
+      "create": "Add campaign",
+      "createFailed": "Failed to add campaign"
     }
   }
 }

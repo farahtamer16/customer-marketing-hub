@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Plus } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
@@ -18,6 +18,7 @@ import {
   ScoreMeter,
   StagePill,
 } from "./GrowthPrimitives";
+import NewAccountDialog from "./NewAccountDialog";
 
 const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 
@@ -30,6 +31,7 @@ export default function AccountDirectory() {
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState("");
   const [tier, setTier] = useState("");
+  const [newAccountOpen, setNewAccountOpen] = useState(false);
   const rows = useMemo(
     () =>
       growthAccounts.filter((account) => {
@@ -136,6 +138,15 @@ export default function AccountDirectory() {
         eyebrow={t("accounts.eyebrow")}
         title={t("accounts.title")}
         description={t("accounts.description")}
+        action={
+          <button
+            type="button"
+            onClick={() => setNewAccountOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/15"
+          >
+            <Plus size={16} /> {t("accounts.newAccount")}
+          </button>
+        }
       />
       <DemoModeBanner />
       <section className="glass-card overflow-hidden rounded-3xl">
@@ -189,6 +200,7 @@ export default function AccountDirectory() {
           initialSorting={[{ id: "intent", desc: true }]}
         />
       </section>
+      <NewAccountDialog open={newAccountOpen} onClose={() => setNewAccountOpen(false)} />
     </>
   );
 }
