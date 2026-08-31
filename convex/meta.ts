@@ -313,6 +313,73 @@ export const processDueComments = internalAction({
   },
 });
 
+// Inspects the actual stored Page access token via Meta's /debug_token
+// endpoint — never returns the token itself, only what it's allowed to do.
+// Use this instead of guessing when a Graph API call fails with a
+// permission error: it shows exactly which scopes the live token carries
+// and whether it's expired, which the OAuth consent screen alone can't
+// tell you (a scope can be requested and shown as granted there, and still
+// not end up on the resulting Page token).
+export type DebugConnectionResult =
+  | { connected: false }
+  | { connected: true; error: string }
+  | {
+      connected: true;
+      platformAccountId: string;
+      isValid: boolean;
+      expiresAt: number | null;
+      dataAccessExpiresAt: number | null;
+      scopes: string[];
+      tokenError?: string;
+    };
+
+export const debugConnection = action({
+  args: {
+    userId: v.string(),
+    platform: v.union(v.literal("Facebook"), v.literal("Instagram")),
+  },
+  handler: async (ctx, args): Promise<DebugConnectionResult> => {
+    const credentials = await ctx.runQuery(internal.socialAccounts.getMetaCredentials, {
+      userId: args.userId,
+      platform: args.platform,
+    });
+    if (!credentials) return { connected: false };
+
+    const appId = process.env.META_APP_ID;
+    const appSecret = process.env.META_APP_SECRET;
+    if (!appId || !appSecret) {
+      return {
+        connected: true,
+        error: "META_APP_ID / META_APP_SECRET is not configured on the server",
+      };
+    }
+
+    try {
+      const debug = await graphGet("/debug_token", {
+        input_token: credentials.accessToken,
+        access_token: `${appId}|${appSecret}`,
+      });
+      const info = debug.data ?? {};
+      return {
+        connected: true,
+        platformAccountId: credentials.platformAccountId,
+        isValid: Boolean(info.is_valid),
+        expiresAt: info.expires_at ? info.expires_at * 1000 : null,
+        dataAccessExpiresAt: info.data_access_expires_at
+          ? info.data_access_expires_at * 1000
+          : null,
+        scopes: (info.scopes as string[] | undefined) ?? [],
+        tokenError: info.error?.message as string | undefined,
+      };
+    } catch (error) {
+      return {
+        connected: true as const,
+        error: error instanceof Error ? error.message : "Failed to inspect token",
+      };
+    }
+  },
+});
+
 export const fetchPostComments = action({
   args: { userId: v.string(), postId: v.id("posts") },
   handler: async (ctx, args) => {

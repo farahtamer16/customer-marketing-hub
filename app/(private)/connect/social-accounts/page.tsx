@@ -3,6 +3,7 @@
 import { ConnectChannelDialog } from "@/components/ui/ConnectChannelDialog";
 import { Plus, Search } from "lucide-react";
 import { ChannelCard } from "@/components/social/ChannelCard";
+import { ConnectionDiagnostics } from "@/components/social/ConnectionDiagnostics";
 import { useSocialAccounts } from "@/hooks/useSocialAccounts";
 import { channelList } from "@/config/channels";
 import { useTranslations } from "next-intl";
@@ -58,7 +59,11 @@ export default function SocialAccountsPage() {
                 isConnected={status.connected}
                 isLoading={status.loading}
                 onDisconnect={() => handleDisconnect(channel.id)}
-              />
+              >
+                {(channel.id === "facebook" || channel.id === "instagram") && (
+                  <ConnectionDiagnostics platform={channel.platform as "Facebook" | "Instagram"} />
+                )}
+              </ChannelCard>
             );
           })}
         </div>
