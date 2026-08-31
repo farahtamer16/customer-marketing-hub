@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
 import { PostComposerHeader } from "./PostComposerHeader";
 import {
   ChannelSelector,
@@ -13,6 +15,7 @@ import { PostComposerFooter } from "./PostComposerFooter";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { CalendarIcon, Link2 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/convex/_generated/api";
 import { type Platform } from "@/types/social-account";
 import { useTranslations } from "next-intl";
 
@@ -64,18 +67,24 @@ export function PostComposer({
   const backdropRef = useRef<HTMLDivElement>(null);
   const imagePreviewUrlRef = useRef<string | null>(null);
 
+  const { user } = useUser();
+  const ownPosts = useQuery(
+    api.posts.getPostsForUser,
+    mode === "comment" && user ? { userId: user.id } : "skip",
+  );
+
   const selectedChannelConfigs = COMPOSER_CHANNELS.filter((item) =>
     selectedChannels.includes(item.id),
   );
   const channel = selectedChannelConfigs[0];
   const ChannelIcon = channel?.icon;
   const targetChannelName = channel?.label ?? t("socialMedia");
-  const targetUrlPlaceholder =
-    channel?.id === "instagram"
-      ? "https://www.instagram.com/p/..."
-      : channel?.id === "facebook"
-        ? "https://www.facebook.com/share/p/..."
-        : "https://...";
+  const commentablePosts = (ownPosts ?? []).filter(
+    (post) =>
+      post.status === "Published" &&
+      Boolean(post.postUrl) &&
+      (!channel || post.platform === channel.platform),
+  );
 
   const handleChannelToggle = (id: ComposerChannelId) => {
     setSelectedChannels((current) => {
@@ -207,16 +216,37 @@ export function PostComposer({
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   {targetChannelName} · {t("targetUrl")}
                 </label>
-                <div className="relative">
-                  <input
-                    type="url"
-                    value={targetUrl}
-                    onChange={(e) => setTargetUrl(e.target.value)}
-                    placeholder={targetUrlPlaceholder}
-                    className="w-full border border-gray-200 rounded-md p-4 focus-within:ring-2 focus-within:ring-blue-500 px-4 py-3 pl-10"
-                  />
-                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                </div>
+                {!channel ? (
+                  <p className="rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    {t("selectChannelFirst")}
+                  </p>
+                ) : ownPosts === undefined ? (
+                  <p className="rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    {t("loadingPosts")}
+                  </p>
+                ) : commentablePosts.length === 0 ? (
+                  <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {t("noCommentablePosts", { channel: targetChannelName })}
+                  </p>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={targetUrl}
+                      onChange={(e) => setTargetUrl(e.target.value)}
+                      className="w-full appearance-none border border-gray-200 rounded-md focus-within:ring-2 focus-within:ring-blue-500 px-4 py-3 pl-10"
+                    >
+                      <option value="" disabled>
+                        {t("selectPost")}
+                      </option>
+                      {commentablePosts.map((post) => (
+                        <option key={post._id} value={post.postUrl}>
+                          {post.content.slice(0, 60)}
+                        </option>
+                      ))}
+                    </select>
+                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  </div>
+                )}
                 <p className="mt-1.5 text-xs text-gray-400">{t("pasteLink")}</p>
               </div>
             )}
