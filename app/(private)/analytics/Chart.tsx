@@ -1,10 +1,12 @@
 import type { AnalyticsRow } from "./AnalyticsOverview";
 
+function engagement(analytics: AnalyticsRow["analytics"]) {
+  if (!analytics) return 0;
+  return analytics.likes + analytics.comments + analytics.shares;
+}
+
 export default function Chart({ rows }: { rows: AnalyticsRow[] }) {
-  const max = Math.max(
-    0,
-    ...rows.map((row) => row.analytics?.impressions ?? 0),
-  );
+  const max = Math.max(0, ...rows.map((row) => engagement(row.analytics)));
 
   return (
     <section className="glass-card mt-6 rounded-3xl p-6 sm:p-8">
@@ -12,13 +14,13 @@ export default function Chart({ rows }: { rows: AnalyticsRow[] }) {
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#3556d9]">
           Post comparison
         </p>
-        <h2 className="mt-1 text-xl font-semibold">Impressions by post</h2>
+        <h2 className="mt-1 text-xl font-semibold">Engagement by post</h2>
       </div>
       <div className="mt-8 space-y-7">
         {rows.map(({ post, analytics }) => {
-          const impressions = analytics?.impressions ?? 0;
+          const total = engagement(analytics);
           const width = max
-            ? Math.max((impressions / max) * 100, impressions ? 4 : 0)
+            ? Math.max((total / max) * 100, total ? 4 : 0)
             : 0;
           return (
             <div
@@ -42,7 +44,7 @@ export default function Chart({ rows }: { rows: AnalyticsRow[] }) {
                 />
               </div>
               <p className="text-right text-sm font-semibold">
-                {impressions.toLocaleString()}
+                {total.toLocaleString()}
               </p>
             </div>
           );

@@ -2,38 +2,35 @@
 
 import { useUser } from "@clerk/nextjs";
 import {
-  Eye,
   Heart,
   Loader2,
   MessageCircleMore,
+  Share2,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import {
-  mockAnalyticsForPosts,
-  type AnalyticsMetrics,
-} from "@/lib/mockAnalytics";
 import Chart from "./Chart";
 import PostAnalytics from "./PostAnalytics";
 import { useFormatter, useTranslations } from "next-intl";
 
 export type AnalyticsRow = {
   post: Doc<"posts">;
-  analytics: AnalyticsMetrics;
+  analytics: Pick<Doc<"analytics">, "likes" | "comments" | "shares"> | null;
 };
-
-const emptyTotals = { impressions: 0, likes: 0, comments: 0, leads: 0 };
 
 export default function AnalyticsOverview() {
   const t = useTranslations("analytics");
   const { user, isLoaded } = useUser();
-  const posts = useQuery(
-    api.posts.getPublishedPostsForUser,
+  const overview = useQuery(
+    api.analytics.getOverview,
     user ? { userId: user.id } : "skip",
+  );
+  const posts = useQuery(
+    api.analytics.getPostsWithAnalytics,
+    user ? { userId: user.id, status: "Published" } : "skip",
   );
 
   return (
@@ -43,67 +40,65 @@ export default function AnalyticsOverview() {
         title={t("title")}
         description={t("description")}
       />
-      <div className="mb-5 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-xs font-medium text-amber-800">
-        <TrendingUp size={16} />
-        {t("mockNotice")}
-      </div>
 
-      {!isLoaded || (user && posts === undefined) ? (
+      {!isLoaded || (user && (overview === undefined || posts === undefined)) ? (
         <LoadingState />
       ) : !user ? (
         <MessageState
           title={t("unavailableTitle")}
           description={t("unavailableDescription")}
         />
-      ) : !posts?.length ? (
+      ) : !posts?.data.length ? (
         <MessageState
           title={t("emptyTitle")}
           description={t("emptyDescription")}
         />
       ) : (
-        <AnalyticsContent posts={posts} />
+        <AnalyticsContent rows={posts.data} overview={overview!} />
       )}
     </>
   );
 }
 
-function AnalyticsContent({ posts }: { posts: Doc<"posts">[] }) {
+function AnalyticsContent({
+  rows,
+  overview,
+}: {
+  rows: AnalyticsRow[];
+  overview: {
+    totalLikes: number;
+    totalComments: number;
+    totalShares: number;
+    totalPosts: number;
+  };
+}) {
   const t = useTranslations("analytics");
   const common = useTranslations("common");
   const format = useFormatter();
-  const rows: AnalyticsRow[] = mockAnalyticsForPosts(posts);
-  const totals = rows.reduce((sum, row) => {
-    return {
-      impressions: sum.impressions + row.analytics.impressions,
-      likes: sum.likes + row.analytics.likes,
-      comments: sum.comments + row.analytics.comments,
-      leads: sum.leads + row.analytics.leads,
-    };
-  }, emptyTotals);
   const metrics = [
     {
-      label: t("impressions"),
-      value: totals.impressions,
-      icon: Eye,
-      color: "text-blue-700 bg-blue-50",
-    },
-    {
       label: t("likes"),
-      value: totals.likes,
+      value: overview.totalLikes,
       icon: Heart,
       color: "text-rose-600 bg-rose-50",
     },
     {
       label: t("comments"),
-      value: totals.comments,
+      value: overview.totalComments,
       icon: MessageCircleMore,
       color: "text-cyan-700 bg-cyan-50",
     },
     {
-      label: t("leads"),
-      value: totals.leads,
-      icon: Users,
+      label: t("shares"),
+      value: overview.totalShares,
+      icon: Share2,
       color: "text-violet-700 bg-violet-50",
+    },
+    {
+      label: t("trackedPosts"),
+      value: overview.totalPosts,
+      icon: TrendingUp,
+      color: "text-blue-700 bg-blue-50",
     },
   ];
 
