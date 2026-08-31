@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { useMutation } from "convex/react";
+import { ArrowLeft } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
-import type {
-  ApprovalHistoryEntry,
-  ApprovalPost,
-  ApprovalStatus,
-} from "@/types/workflow";
+import { toast } from "sonner";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { ApprovalPost } from "@/types/workflow";
 import { PrototypeNotices } from "./TeamPrimitives";
 import { ApprovalStatusPill, ChannelPills } from "./WorkflowPrimitives";
 import {
@@ -20,40 +20,31 @@ import {
 export default function ApprovalReview({ post }: { post: ApprovalPost }) {
   const t = useTranslations("growth");
   const format = useFormatter();
-  const [status, setStatus] = useState<ApprovalStatus>(post.status);
+  const decide = useMutation(api.approvals.decide);
   const [note, setNote] = useState("");
-  const [history, setHistory] = useState(post.history);
   const [decision, setDecision] = useState<
     "approve" | "changes" | "reject" | null
   >(null);
+  const [submitting, setSubmitting] = useState(false);
+  const status = post.status;
+  const history = post.history;
 
-  const applyDecision = () => {
-    if (!decision) return;
-    const nextStatus: ApprovalStatus =
-      decision === "approve"
-        ? "approved"
-        : decision === "changes"
-          ? "changesRequested"
-          : "rejected";
-    const action: ApprovalHistoryEntry["action"] =
-      decision === "approve"
-        ? "approved"
-        : decision === "reject"
-          ? "rejected"
-          : "changesRequested";
-    setStatus(nextStatus);
-    setHistory((current) => [
-      ...current,
-      {
-        id: `decision-${Date.now()}`,
-        actor: t("approvalReview.demoReviewer"),
-        action,
-        occurredAt: Date.now(),
+  const applyDecision = async () => {
+    if (!decision || submitting) return;
+    setSubmitting(true);
+    try {
+      await decide({
+        postId: post.id as Id<"approvalPosts">,
+        decision,
         note: note.trim() || undefined,
-      },
-    ]);
-    setDecision(null);
-    setNote("");
+      });
+      setDecision(null);
+      setNote("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to record decision");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -166,24 +157,13 @@ export default function ApprovalReview({ post }: { post: ApprovalPost }) {
                   <button
                     type="button"
                     onClick={applyDecision}
-                    className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white"
+                    disabled={submitting}
+                    className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {t("approvalReview.confirm")}
                   </button>
                 </div>
               </div>
-            )}
-            {status !== post.status && (
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus(post.status);
-                  setHistory(post.history);
-                }}
-                className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-500"
-              >
-                <RotateCcw size={13} /> {t("approvalReview.resetDemo")}
-              </button>
             )}
           </article>
         </div>

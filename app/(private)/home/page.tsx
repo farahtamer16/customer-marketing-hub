@@ -1,6 +1,5 @@
-import RoleDashboard from "@/components/growth/RoleDashboard";
-import { HARDCODED_DASHBOARD_ROLE } from "@/lib/dashboard-access";
+import CurrentRoleDashboard from "@/components/growth/CurrentRoleDashboard";
 
 export default function HomePage() {
-  return <RoleDashboard role={HARDCODED_DASHBOARD_ROLE} />;
+  return <CurrentRoleDashboard />;
 }

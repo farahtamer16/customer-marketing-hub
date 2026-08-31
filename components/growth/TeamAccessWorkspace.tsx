@@ -1,17 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "convex/react";
 import { ShieldCheck, UserCheck, UserPlus, UsersRound } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
 import TableToolbar from "@/components/ui/TableToolbar";
-import {
-  workspaceMembers,
-  workspacePermissions,
-  workspaceRoles,
-} from "@/lib/workspace-data";
+import { api } from "@/convex/_generated/api";
+import { workspacePermissions, workspaceRoles } from "@/lib/workspace-data";
 import type { WorkspaceMember } from "@/types/growth";
 import { MetricCard } from "./GrowthPrimitives";
 import InviteMemberDialog from "./InviteMemberDialog";
@@ -22,10 +20,13 @@ import {
   WorkspaceRolePill,
 } from "./TeamPrimitives";
 
+const EMPTY_MEMBERS: WorkspaceMember[] = [];
+
 export default function TeamAccessWorkspace() {
   const t = useTranslations("growth");
   const format = useFormatter();
-  const [members, setMembers] = useState(workspaceMembers);
+  const members = (useQuery(api.team.listMembers) ??
+    EMPTY_MEMBERS) as WorkspaceMember[];
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
@@ -246,11 +247,7 @@ export default function TeamAccessWorkspace() {
         </div>
       </section>
 
-      <InviteMemberDialog
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        onInvite={(member) => setMembers((current) => [member, ...current])}
-      />
+      <InviteMemberDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </>
   );
 }

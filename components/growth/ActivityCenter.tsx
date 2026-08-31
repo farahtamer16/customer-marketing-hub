@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
+import { useMutation, useQuery } from "convex/react";
 import { ArrowUpRight, BellRing, CheckCheck, History } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
-import { workspaceAudit, workspaceNotifications } from "@/lib/workflow-data";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { WorkspaceAuditEntry } from "@/types/workflow";
 import { DemoModeBanner } from "./GrowthPrimitives";
 import { NotificationIcon, UnreadDot } from "./WorkflowPrimitives";
@@ -15,7 +17,11 @@ import { NotificationIcon, UnreadDot } from "./WorkflowPrimitives";
 export default function ActivityCenter() {
   const t = useTranslations("growth");
   const format = useFormatter();
-  const [notifications, setNotifications] = useState(workspaceNotifications);
+  const notifications = useQuery(api.notifications.listNotifications) ?? [];
+  const workspaceAudit = (useQuery(api.audit.listEntries) ??
+    []) as WorkspaceAuditEntry[];
+  const markRead = useMutation(api.notifications.markRead);
+  const markAllRead = useMutation(api.notifications.markAllRead);
   const columns = useMemo<
     ColumnDef<typeof dataTableFeatures, WorkspaceAuditEntry>[]
   >(
@@ -75,11 +81,7 @@ export default function ActivityCenter() {
         action={
           <button
             type="button"
-            onClick={() =>
-              setNotifications((current) =>
-                current.map((item) => ({ ...item, read: true })),
-              )
-            }
+            onClick={() => markAllRead()}
             disabled={!unread}
             className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#173b9a] disabled:opacity-40"
           >
@@ -107,13 +109,7 @@ export default function ActivityCenter() {
                 key={item.id}
                 href={item.href}
                 onClick={() =>
-                  setNotifications((current) =>
-                    current.map((notification) =>
-                      notification.id === item.id
-                        ? { ...notification, read: true }
-                        : notification,
-                    ),
-                  )
+                  markRead({ notificationId: item.id as Id<"workspaceNotifications"> })
                 }
                 className={`flex items-start gap-3 rounded-2xl border p-4 transition hover:border-blue-200 ${item.read ? "border-slate-100 bg-white/60" : "border-blue-200 bg-blue-50/55"}`}
               >
@@ -121,12 +117,12 @@ export default function ActivityCenter() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-[#071e55]">
-                      {t(`notificationData.${item.id}.title`)}
+                      {item.title}
                     </span>
                     {!item.read && <UnreadDot />}
                   </span>
                   <span className="mt-1 block text-xs leading-5 text-slate-500">
-                    {t(`notificationData.${item.id}.detail`)}
+                    {item.detail}
                   </span>
                   <span className="mt-2 block text-[0.68rem] text-slate-400">
                     {format.dateTime(item.occurredAt, {

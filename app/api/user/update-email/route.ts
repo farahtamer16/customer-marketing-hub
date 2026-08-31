@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         );
       }
 
-      if (status === "pending") {
+      if (status === "unverified") {
         await clerk.emailAddresses.updateEmailAddress(existing.id, {
           verified: true,
         });

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -14,10 +15,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
 import TableToolbar from "@/components/ui/TableToolbar";
-import { approvalPosts } from "@/lib/workflow-data";
+import { api } from "@/convex/_generated/api";
 import type { ApprovalPost, ApprovalStatus } from "@/types/workflow";
 import { DemoModeBanner, MetricCard } from "./GrowthPrimitives";
 import { ApprovalStatusPill, ChannelPills } from "./WorkflowPrimitives";
+
+const EMPTY_POSTS: ApprovalPost[] = [];
 
 const statuses: ApprovalStatus[] = [
   "draft",
@@ -33,6 +36,8 @@ export default function ApprovalQueue() {
   const t = useTranslations("growth");
   const format = useFormatter();
   const router = useRouter();
+  const approvalPosts = (useQuery(api.approvals.listPosts) ??
+    EMPTY_POSTS) as ApprovalPost[];
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [channel, setChannel] = useState("");
@@ -50,7 +55,7 @@ export default function ApprovalQueue() {
             post.channels.includes(channel as "facebook" | "instagram"))
         );
       }),
-    [channel, search, status],
+    [approvalPosts, channel, search, status],
   );
   const columns = useMemo<ColumnDef<typeof dataTableFeatures, ApprovalPost>[]>(
     () => [

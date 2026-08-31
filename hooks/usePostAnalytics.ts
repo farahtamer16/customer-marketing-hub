@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { fetchPostAnalytics } from "@/lib/api";
 import { useTranslations } from "next-intl";
 
 const REFRESH_COOLDOWN_MS = 60 * 60 * 1000;
@@ -18,51 +16,9 @@ type AnalyticsSnapshot = Pick<
   "likes" | "comments" | "shares" | "scrapedAt"
 >;
 
-type AnalyticsResponse = {
-  success?: boolean;
-  error?: string;
-  cached?: boolean;
-  data?: unknown;
-  analytics?: unknown;
-  result?: unknown;
-};
-
-const toMetric = (value: unknown) => {
-  const metric = Number(value);
-  return Number.isFinite(metric) ? metric : null;
-};
-
-function getAnalyticsSnapshot(value: unknown): AnalyticsSnapshot | null {
-  if (Array.isArray(value)) {
-    return (
-      value
-        .map(getAnalyticsSnapshot)
-        .filter((item): item is AnalyticsSnapshot => item !== null)
-        .sort((a, b) => b.scrapedAt - a.scrapedAt)[0] ?? null
-    );
-  }
-  if (!value || typeof value !== "object") return null;
-
-  const record = value as Record<string, unknown>;
-  const likes = toMetric(record.likes);
-  const comments = toMetric(record.comments);
-  if (likes !== null && comments !== null) {
-    return {
-      likes,
-      comments,
-      shares: toMetric(record.shares) ?? 0,
-      scrapedAt:
-        toMetric(record.scrapedAt ?? record.updatedAt ?? record.createdAt) ??
-        Date.now(),
-    };
-  }
-
-  return getAnalyticsSnapshot(record.data ?? record.analytics ?? record.result);
-}
-
 export function usePostAnalytics(postId: Id<"posts">, userId: string) {
   const t = useTranslations("analytics");
-  const { getToken } = useAuth();
+  const fetchPostAnalytics = useAction(api.meta.fetchPostAnalytics);
   const storedAnalytics = useQuery(api.analytics.getLatestForPost, { postId });
   const [refreshedAnalytics, setRefreshedAnalytics] =
     useState<AnalyticsSnapshot | null>(null);
@@ -112,23 +68,20 @@ export function usePostAnalytics(postId: Id<"posts">, userId: string) {
     setRefreshing(true);
     setError(null);
     try {
-      const token = (await getToken()) ?? undefined;
-      const result = (await fetchPostAnalytics(
-        postId,
-        userId,
-        token,
-      )) as AnalyticsResponse;
-      if (result.success === false) {
-        throw new Error(result.error || t("refreshFailed"));
-      }
-      const snapshot = getAnalyticsSnapshot(result);
-      if (snapshot) setRefreshedAnalytics(snapshot);
+      const result = await fetchPostAnalytics({ userId, postId });
+      const snapshot: AnalyticsSnapshot = {
+        likes: result.likes,
+        comments: result.comments,
+        shares: result.shares,
+        scrapedAt: Date.now(),
+      };
+      setRefreshedAnalytics(snapshot);
 
       const nextAllowedAt = Date.now() + REFRESH_COOLDOWN_MS;
       localStorage.setItem(cooldownKey(postId), String(nextAllowedAt));
       setNextRefreshAt(nextAllowedAt);
       setNow(Date.now());
-      setCached(Boolean(result.cached));
+      setCached(false);
     } catch (refreshError) {
       setError(
         refreshError instanceof Error

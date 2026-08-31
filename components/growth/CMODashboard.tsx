@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import {
   BellRing,
   CircleDollarSign,
@@ -8,8 +9,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
-import { campaignImpact, growthAccounts } from "@/lib/growth-data";
-import { workspaceNotifications } from "@/lib/workflow-data";
+import { api } from "@/convex/_generated/api";
+import type { CampaignImpact, GrowthAccount } from "@/types/growth";
 import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
 import { AccountAvatar, ScoreMeter, StagePill } from "./GrowthPrimitives";
 
@@ -17,6 +18,11 @@ export default function CMODashboard() {
   const t = useTranslations("growth.roleDashboards.cmo");
   const growth = useTranslations("growth");
   const format = useFormatter();
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    []) as GrowthAccount[];
+  const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
+    []) as CampaignImpact[];
+  const workspaceNotifications = useQuery(api.notifications.listNotifications) ?? [];
   const totalPipeline = growthAccounts.reduce(
     (sum, account) => sum + account.pipelineValue,
     0,
@@ -148,10 +154,10 @@ export default function CMODashboard() {
                 className="border-b border-slate-100 pb-4 last:border-0 last:pb-0"
               >
                 <p className="text-sm font-semibold text-[#071e55]">
-                  {growth(`notificationData.${alert.id}.title`)}
+                  {alert.title}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  {growth(`notificationData.${alert.id}.detail`)}
+                  {alert.detail}
                 </p>
               </div>
             ))}

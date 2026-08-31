@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "convex/react";
 import {
   ArrowUpRight,
   Building2,
@@ -12,7 +13,9 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
-import { growthAccounts, journeyStages } from "@/lib/growth-data";
+import { api } from "@/convex/_generated/api";
+import { journeyStages } from "@/lib/growth-data";
+import type { GrowthAccount } from "@/types/growth";
 import { AccountAvatar, DemoModeBanner } from "./GrowthPrimitives";
 
 const consumerStages = [
@@ -130,6 +133,8 @@ export default function JourneyWorkspace() {
 
 function B2BJourney() {
   const t = useTranslations("growth");
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    []) as GrowthAccount[];
 
   return (
     <div className="mt-6 overflow-x-auto pb-2">

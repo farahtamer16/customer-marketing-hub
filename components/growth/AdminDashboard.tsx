@@ -1,9 +1,10 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import { ScrollText, ShieldCheck, UsersRound } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
-import { workspaceAudit } from "@/lib/workflow-data";
-import { workspaceMembers, workspaceRoles } from "@/lib/workspace-data";
+import { api } from "@/convex/_generated/api";
+import { workspaceRoles } from "@/lib/workspace-data";
 import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
 import { WorkspaceRolePill } from "./TeamPrimitives";
 
@@ -11,6 +12,8 @@ export default function AdminDashboard() {
   const t = useTranslations("growth.roleDashboards.admin");
   const growth = useTranslations("growth");
   const format = useFormatter();
+  const workspaceMembers = useQuery(api.team.listMembers) ?? [];
+  const workspaceAudit = useQuery(api.audit.listEntries) ?? [];
 
   return (
     <RoleDashboardShell role="admin">

@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import { ArrowUpRight } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
 import TableToolbar from "@/components/ui/TableToolbar";
-import { growthAccounts, journeyStages } from "@/lib/growth-data";
+import { api } from "@/convex/_generated/api";
+import { journeyStages } from "@/lib/growth-data";
 import type { GrowthAccount } from "@/types/growth";
 import {
   AccountAvatar,
@@ -17,10 +19,14 @@ import {
   StagePill,
 } from "./GrowthPrimitives";
 
+const EMPTY_ACCOUNTS: GrowthAccount[] = [];
+
 export default function AccountDirectory() {
   const t = useTranslations("growth");
   const format = useFormatter();
   const router = useRouter();
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    EMPTY_ACCOUNTS) as GrowthAccount[];
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState("");
   const [tier, setTier] = useState("");
@@ -37,7 +43,7 @@ export default function AccountDirectory() {
           (!tier || account.tier === tier)
         );
       }),
-    [search, stage, tier],
+    [growthAccounts, search, stage, tier],
   );
 
   const columns = useMemo<ColumnDef<typeof dataTableFeatures, GrowthAccount>[]>(

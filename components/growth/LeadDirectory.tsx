@@ -2,14 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
 import TableToolbar from "@/components/ui/TableToolbar";
-import { growthAccounts, growthLeads, signalSources } from "@/lib/growth-data";
-import type { GrowthLead } from "@/types/growth";
+import { api } from "@/convex/_generated/api";
+import { signalSources } from "@/lib/growth-data";
+import type { GrowthAccount, GrowthLead } from "@/types/growth";
 import {
   AccountAvatar,
   DemoModeBanner,
@@ -17,9 +19,16 @@ import {
   SourcePill,
 } from "./GrowthPrimitives";
 
+const EMPTY_ACCOUNTS: GrowthAccount[] = [];
+const EMPTY_LEADS: GrowthLead[] = [];
+
 export default function LeadDirectory() {
   const t = useTranslations("growth");
   const router = useRouter();
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    EMPTY_ACCOUNTS) as GrowthAccount[];
+  const growthLeads = (useQuery(api.growth.listLeads) ??
+    EMPTY_LEADS) as GrowthLead[];
   const [search, setSearch] = useState("");
   const [intent, setIntent] = useState("");
   const [source, setSource] = useState("");
@@ -39,7 +48,7 @@ export default function LeadDirectory() {
           (!source || lead.source === source)
         );
       }),
-    [intent, search, source],
+    [growthAccounts, growthLeads, intent, search, source],
   );
 
   const columns = useMemo<ColumnDef<typeof dataTableFeatures, GrowthLead>[]>(
@@ -131,7 +140,7 @@ export default function LeadDirectory() {
         cell: () => <ArrowUpRight size={15} className="text-slate-300" />,
       },
     ],
-    [t],
+    [growthAccounts, t],
   );
 
   return (

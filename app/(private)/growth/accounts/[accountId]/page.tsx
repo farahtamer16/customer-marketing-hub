@@ -1,18 +1,25 @@
+"use client";
+
+import { use } from "react";
+import { useQuery } from "convex/react";
 import { notFound } from "next/navigation";
 import AccountProfile from "@/components/growth/AccountProfile";
-import { getGrowthAccount, growthAccounts } from "@/lib/growth-data";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { GrowthAccount } from "@/types/growth";
 
-export function generateStaticParams() {
-  return growthAccounts.map((account) => ({ accountId: account.id }));
-}
-
-export default async function GrowthAccountPage({
+export default function GrowthAccountPage({
   params,
 }: {
   params: Promise<{ accountId: string }>;
 }) {
-  const { accountId } = await params;
-  const account = getGrowthAccount(accountId);
-  if (!account) notFound();
-  return <AccountProfile account={account} />;
+  const { accountId } = use(params);
+  const account = useQuery(api.growth.getAccount, {
+    accountId: accountId as Id<"growthAccounts">,
+  });
+
+  if (account === null) notFound();
+  if (account === undefined) return null;
+
+  return <AccountProfile account={account as GrowthAccount} />;
 }

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { classifyComments, fetchPostComments } from "@/lib/api";
+import { classifyComments } from "@/lib/api";
 
 const COMMENT_CLASSIFICATIONS = [
   "Lead",
@@ -87,28 +86,24 @@ const normalizeComment = (
 };
 
 export function usePostComments(postId: Id<"posts">, userId: string) {
-  const { getToken } = useAuth();
   const post = useQuery(api.posts.getPost, { postId });
   const storedComments = useQuery(api.comments.getCommentsForPost, { postId });
   const storeComments = useMutation(api.comments.storeComments);
+  const fetchPostComments = useAction(api.meta.fetchPostComments);
   const [comments, setComments] = useState<FetchedPostComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [classifying, setClassifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchComments = async (refresh = false) => {
+  // `refresh` is accepted for backwards-compatible call sites; the Graph
+  // API action always fetches live data, so there's no cache to bypass.
+  const fetchComments = async (_refresh = false) => {
     if (!postId || !userId) return;
     setLoading(true);
     setError(null);
 
     try {
-      const token = (await getToken()) ?? undefined;
-      const result = (await fetchPostComments(
-        postId,
-        userId,
-        token,
-        refresh,
-      )) as CommentsResponse;
+      const result = (await fetchPostComments({ userId, postId })) as CommentsResponse;
       if (result.success === false) {
         throw new Error(result.error || "Failed to fetch comments");
       }
@@ -122,7 +117,6 @@ export function usePostComments(postId: Id<"posts">, userId: string) {
         usableComments.map(
           (comment) => comment.content ?? comment.text ?? comment.message ?? "",
         ),
-        token,
       );
       const classifiedComments = usableComments.map((comment, index) =>
         normalizeComment(

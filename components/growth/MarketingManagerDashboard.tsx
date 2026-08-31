@@ -2,24 +2,31 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "convex/react";
 import { ArrowUpRight, Megaphone, Sparkles, UserCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
 import TableToolbar from "@/components/ui/TableToolbar";
-import {
-  campaignImpact,
-  growthAccounts,
-  growthLeads,
-  journeyStages,
-} from "@/lib/growth-data";
-import type { GrowthAccount } from "@/types/growth";
+import { api } from "@/convex/_generated/api";
+import { journeyStages } from "@/lib/growth-data";
+import type { CampaignImpact, GrowthAccount, GrowthLead } from "@/types/growth";
 import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
 import { ScoreMeter, StagePill } from "./GrowthPrimitives";
+
+const EMPTY_ACCOUNTS: GrowthAccount[] = [];
+const EMPTY_LEADS: GrowthLead[] = [];
+const EMPTY_CAMPAIGNS: CampaignImpact[] = [];
 
 export default function MarketingManagerDashboard() {
   const t = useTranslations("growth.roleDashboards.marketing_manager");
   const growth = useTranslations("growth");
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    EMPTY_ACCOUNTS) as GrowthAccount[];
+  const growthLeads = (useQuery(api.growth.listLeads) ??
+    EMPTY_LEADS) as GrowthLead[];
+  const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
+    EMPTY_CAMPAIGNS) as CampaignImpact[];
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState("");
   const accounts = useMemo(
@@ -32,7 +39,7 @@ export default function MarketingManagerDashboard() {
               .includes(search.toLocaleLowerCase())) &&
           (!stage || account.stage === stage),
       ),
-    [search, stage],
+    [growthAccounts, search, stage],
   );
   const columns = useMemo<ColumnDef<typeof dataTableFeatures, GrowthAccount>[]>(
     () => [

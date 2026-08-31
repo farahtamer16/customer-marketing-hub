@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -10,7 +10,6 @@ type ActionKind = "post" | "schedule";
 export function useComposerWorkflow() {
   const router = useRouter();
   const { user } = useUser();
-  const { getToken } = useAuth();
   const [isPosting, setIsPosting] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
 
@@ -51,7 +50,6 @@ export function useComposerWorkflow() {
   return {
     user,
     userId: user?.id,
-    getToken,
     isPosting,
     isScheduling,
     requireUser,
