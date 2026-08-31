@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.5-flash-lite",
       contents: [
         {
           text: `Classify each numbered comment below into exactly ONE category: ${CATEGORIES.join(", ")}.
@@ -68,6 +68,7 @@ Comments:
 ${numbered}`,
         },
       ],
+      config: { httpOptions: { timeout: 20_000 } },
     });
 
     let raw = response.text?.trim() || "[]";

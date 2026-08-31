@@ -6,7 +6,10 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 
-const REFRESH_COOLDOWN_MS = 60 * 60 * 1000;
+// The Graph API is cheap to call, unlike the old scraping-based backend
+// this cooldown was originally sized for — just guard against accidental
+// button-mashing, not real rate limiting.
+const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
 
 const cooldownKey = (postId: Id<"posts">) =>
   `spiders-ai:analytics-refresh:${postId}`;

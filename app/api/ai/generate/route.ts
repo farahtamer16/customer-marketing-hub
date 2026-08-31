@@ -38,8 +38,9 @@ Do not include any extra text, introductions, or conclusions. Only the numbered 
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.5-flash-lite",
       contents: [{ text: prompt }],
+      config: { httpOptions: { timeout: 20_000 } },
     });
 
     const text = response.text?.trim();
