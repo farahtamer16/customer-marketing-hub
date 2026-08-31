@@ -1,14 +1,9 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PostComposer } from "@/components/ui/PostComposer/PostComposer";
 import { useComposerWorkflow } from "@/hooks/useComposerWorkflow";
-import {
-  publishComment,
-  publishInstagramComment,
-  scheduleComment,
-} from "@/lib/api";
 import { type Platform } from "@/types/social-account";
 import { useTranslations } from "next-intl";
 
@@ -16,6 +11,8 @@ export default function CommentPage() {
   const t = useTranslations("comments");
   const workflow = useComposerWorkflow();
   const createComment = useMutation(api.comments.createComment);
+  const scheduleComment = useMutation(api.comments.scheduleComment);
+  const publishCommentOnUrl = useAction(api.meta.publishCommentOnUrl);
   const authorName =
     workflow.user?.fullName || workflow.user?.username || "You";
 
@@ -54,12 +51,7 @@ export default function CommentPage() {
         success: t("posted", { platform }),
       },
       async () => {
-        const token = (await workflow.getToken()) ?? undefined;
-        if (platform === "Instagram") {
-          await publishInstagramComment(userId, targetUrl, content, token);
-        } else {
-          await publishComment(userId, targetUrl, content, token);
-        }
+        await publishCommentOnUrl({ userId, targetUrl, content });
         await createComment({
           userId,
           targetUrl,
@@ -89,7 +81,6 @@ export default function CommentPage() {
         success: t("scheduled", { platform }),
       },
       async () => {
-        const token = (await workflow.getToken()) ?? undefined;
         await scheduleComment({
           userId,
           targetUrl,
@@ -98,7 +89,6 @@ export default function CommentPage() {
           scheduledAt,
           platform: platform === "Instagram" ? "instagram" : "facebook",
           classification: "Engagement",
-          token,
         });
       },
     );

@@ -1,19 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 import { PostComposer } from "@/components/ui/PostComposer/PostComposer";
-import {
-  publishPost,
-  publishInstagramPost,
-  schedulePost,
-  uploadTempImage,
-} from "@/lib/api";
-import { fileToBase64 } from "@/lib/image";
 import { type Platform } from "@/types/social-account";
 import { useTranslations } from "next-intl";
 
@@ -23,13 +17,28 @@ export default function CreatePage() {
   const t = useTranslations("composer");
   const router = useRouter();
   const { user } = useUser();
-  const { getToken } = useAuth();
   const userId = user?.id;
 
   const [isPosting, setIsPosting] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
 
-  const recordPublishedPost = useMutation(api.posts.recordPublishedPost);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const finalizeUpload = useMutation(api.files.finalizeUpload);
+  const schedulePost = useMutation(api.posts.schedulePost);
+  const publishFacebookPost = useAction(api.meta.publishFacebookPost);
+  const publishInstagramPost = useAction(api.meta.publishInstagramPost);
+
+  const uploadImage = async (image: File) => {
+    const uploadUrl = await generateUploadUrl();
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": image.type },
+      body: image,
+    });
+    if (!response.ok) throw new Error("Failed to upload image");
+    const { storageId } = await response.json();
+    return storageId as Id<"_storage">;
+  };
 
   const handlePost = async (
     content: string,
@@ -41,9 +50,12 @@ export default function CreatePage() {
       toast.error(t("loginRequired"));
       return;
     }
-
     if (platforms.length === 0) {
       toast.error(t("channelRequired"));
+      return;
+    }
+    if (platforms.includes("Instagram") && !image) {
+      toast.error(t("instagramImageRequired"));
       return;
     }
 
@@ -54,27 +66,17 @@ export default function CreatePage() {
     );
 
     try {
-      let imageBase64: string | undefined;
-      if (image) {
-        imageBase64 = await fileToBase64(image);
-      }
+      const storageId = image ? await uploadImage(image) : undefined;
 
       const results = await Promise.allSettled(
         platforms.map(async (platform) => {
-          const token =
-            (await getToken(
-              platforms.length > 1 ? { skipCache: true } : undefined,
-            )) ?? undefined;
-          const result =
-            platform === "Instagram"
-              ? await publishInstagramPost(userId, content, token, imageBase64)
-              : await publishPost(userId, content, token, imageBase64);
-
-          if (!result.success) {
-            throw new Error(result.error || t("publishFailed", { platform }));
-          }
-          if (!result.postId) {
-            await recordPublishedPost({ userId, platform, content });
+          if (platform === "Instagram") {
+            if (!storageId) throw new Error(t("instagramImageRequired"));
+            await publishInstagramPost({ userId, caption: content, storageId });
+          } else if (platform === "Facebook") {
+            await publishFacebookPost({ userId, content, storageId });
+          } else {
+            throw new Error(t("publishFailed", { platform }));
           }
           return platform;
         }),
@@ -122,7 +124,6 @@ export default function CreatePage() {
       toast.error(t("loginRequired"));
       return;
     }
-
     if (platforms.length === 0) {
       toast.error(t("channelRequired"));
       return;
@@ -140,23 +141,18 @@ export default function CreatePage() {
 
     try {
       let mediaUrl: string | undefined;
-
       if (image) {
-        const imageBase64 = await fileToBase64(image);
-        const token = (await getToken({ skipCache: true })) ?? undefined;
-        mediaUrl = await uploadTempImage(imageBase64, userId, token);
-        console.log(`📸 Image uploaded to temp: ${mediaUrl}`);
+        const storageId = await uploadImage(image);
+        mediaUrl = await finalizeUpload({ storageId });
       }
 
       for (const platform of platforms) {
-        const token = (await getToken({ skipCache: true })) ?? undefined;
         await schedulePost({
           userId,
           content,
           scheduledAt,
-          platform: platform === "Instagram" ? "instagram" : "facebook",
+          platform,
           mediaUrl,
-          token,
         });
       }
 

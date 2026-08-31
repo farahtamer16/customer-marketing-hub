@@ -26,10 +26,19 @@ export default defineSchema({
       v.literal("Connected"),
       v.literal("Disconnected"),
     ),
+    // Meta Graph API credentials for Facebook/Instagram. platformAccountId is
+    // the Facebook Page id (Facebook) or Instagram Business Account id
+    // (Instagram); accessToken is the Page access token used for both, since
+    // Instagram publishing on a linked account is authorized through its
+    // parent Page. Never return accessToken from a public query.
+    platformAccountId: v.optional(v.string()),
+    accessToken: v.optional(v.string()),
+    tokenObtainedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_platform", ["platform"]),
+    .index("by_platform", ["platform"])
+    .index("by_userId_platform", ["userId", "platform"]),
 
   posts: defineTable({
     userId: v.string(),
