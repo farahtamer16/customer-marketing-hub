@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "convex/react";
 import {
   ArrowUpRight,
   Building2,
@@ -11,6 +12,8 @@ import {
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
+import { api } from "@/convex/_generated/api";
+import type { GrowthAccount } from "@/types/growth";
 import {
   AccountAvatar,
   DemoModeBanner,
@@ -18,15 +21,13 @@ import {
   SourcePill,
   StagePill,
 } from "./GrowthPrimitives";
-import {
-  growthAccounts,
-  journeyStages,
-  signalSources,
-} from "@/lib/growth-data";
+import { journeyStages, signalSources } from "@/lib/growth-data";
 
 export default function GrowthDashboard() {
   const t = useTranslations("growth");
   const format = useFormatter();
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    []) as GrowthAccount[];
   const prioritized = [...growthAccounts]
     .sort((a, b) => b.intentScore - a.intentScore)
     .slice(0, 3);

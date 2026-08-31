@@ -1,8 +1,5 @@
 import type { DashboardRole } from "@/types/dashboard";
 
-// Temporary frontend role until api.dashboard.getDashboardData is deployed.
-export const HARDCODED_DASHBOARD_ROLE: DashboardRole = "marketing_manager";
-
 type DashboardNavLabel =
   | "growthDashboard"
   | "growthTeam"

@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMutation } from "convex/react";
 import { MailPlus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { api } from "@/convex/_generated/api";
 import { workspaceRoles } from "@/lib/workspace-data";
-import type { WorkspaceMember, WorkspaceRole } from "@/types/growth";
+import type { WorkspaceRole } from "@/types/growth";
 
 export default function InviteMemberDialog({
   open,
   onClose,
-  onInvite,
 }: {
   open: boolean;
   onClose: () => void;
-  onInvite: (member: WorkspaceMember) => void;
 }) {
   const t = useTranslations("growth");
+  const inviteMember = useMutation(api.team.inviteMember);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<WorkspaceRole>("socialMediaUser");
+  const [submitting, setSubmitting] = useState(false);
   const valid = name.trim().length >= 2 && /^\S+@\S+\.\S+$/.test(email);
 
   useEffect(() => {
@@ -32,20 +35,25 @@ export default function InviteMemberDialog({
 
   if (!open) return null;
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!valid) return;
-    onInvite({
-      id: `invited-${Date.now()}`,
-      name: name.trim(),
-      email: email.trim(),
-      role,
-      status: "invited",
-    });
-    setName("");
-    setEmail("");
-    setRole("socialMediaUser");
-    onClose();
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    try {
+      await inviteMember({
+        name: name.trim(),
+        email: email.trim(),
+        role,
+      });
+      setName("");
+      setEmail("");
+      setRole("socialMediaUser");
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to invite member");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -135,7 +143,7 @@ export default function InviteMemberDialog({
             </button>
             <button
               type="submit"
-              disabled={!valid}
+              disabled={!valid || submitting}
               className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t("team.sendInvite")}

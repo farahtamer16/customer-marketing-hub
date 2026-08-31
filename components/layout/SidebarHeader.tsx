@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "convex/react";
 import {
   BarChart3,
   Building2,
@@ -18,10 +19,8 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import {
-  dashboardNavigation,
-  HARDCODED_DASHBOARD_ROLE,
-} from "@/lib/dashboard-access";
+import { api } from "@/convex/_generated/api";
+import { dashboardNavigation } from "@/lib/dashboard-access";
 
 const growthIcons = {
   growthDashboard: Gauge,
@@ -41,7 +40,8 @@ export default function SidebarHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const growthItems = dashboardNavigation[HARDCODED_DASHBOARD_ROLE].map(
+  const role = useQuery(api.team.getMyRole);
+  const growthItems = (role ? dashboardNavigation[role] : []).map(
     ({ label, href }) => ({
       name: t(label),
       href,
@@ -72,7 +72,7 @@ export default function SidebarHeader() {
       <p className="px-3 text-[0.63rem] font-bold uppercase tracking-[0.2em] text-slate-400">
         {t("workspace")}
       </p>
-      {HARDCODED_DASHBOARD_ROLE === "social_media_user" && (
+      {role === "social_media_user" && (
         <div className="relative inline-block text-start" ref={dropdownRef}>
           <button
             type="button"

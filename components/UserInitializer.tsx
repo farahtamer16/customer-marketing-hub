@@ -10,6 +10,8 @@ export default function UserInitializer() {
   const { isSignedIn, isLoaded } = useAuth();
 
   const getOrCreateUser = useMutation(api.users.getOrCreate);
+  const ensureCurrentMember = useMutation(api.team.ensureCurrentMember);
+  const seedDemoWorkspace = useMutation(api.seed.seedDemoWorkspace);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
@@ -19,7 +21,13 @@ export default function UserInitializer() {
     getOrCreateUser().catch((error) => {
       console.error("Failed to initialize user:", error);
     });
-  }, [isLoaded, isSignedIn, getOrCreateUser]);
+    ensureCurrentMember().catch((error) => {
+      console.error("Failed to initialize team member:", error);
+    });
+    seedDemoWorkspace().catch((error) => {
+      console.error("Failed to seed demo workspace:", error);
+    });
+  }, [isLoaded, isSignedIn, getOrCreateUser, ensureCurrentMember, seedDemoWorkspace]);
 
   return null;
 }

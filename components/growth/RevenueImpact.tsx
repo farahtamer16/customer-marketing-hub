@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import {
   BadgeDollarSign,
   ChartNoAxesCombined,
@@ -8,12 +9,15 @@ import {
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
-import { campaignImpact } from "@/lib/growth-data";
+import { api } from "@/convex/_generated/api";
+import type { CampaignImpact } from "@/types/growth";
 import { DemoModeBanner, MetricCard, SourcePill } from "./GrowthPrimitives";
 
 export default function RevenueImpact() {
   const t = useTranslations("growth");
   const format = useFormatter();
+  const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
+    []) as CampaignImpact[];
   const totals = campaignImpact.reduce(
     (result, campaign) => ({
       spend: result.spend + campaign.spend,
