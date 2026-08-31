@@ -1,23 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import {
   BadgeDollarSign,
   ChartNoAxesCombined,
   CircleDollarSign,
   HeartHandshake,
+  Plus,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
 import type { CampaignImpact } from "@/types/growth";
 import { DemoModeBanner, MetricCard, SourcePill } from "./GrowthPrimitives";
+import NewCampaignDialog from "./NewCampaignDialog";
+
+const EMPTY_CAMPAIGNS: CampaignImpact[] = [];
 
 export default function RevenueImpact() {
   const t = useTranslations("growth");
   const format = useFormatter();
   const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
-    []) as CampaignImpact[];
+    EMPTY_CAMPAIGNS) as CampaignImpact[];
+  const [newCampaignOpen, setNewCampaignOpen] = useState(false);
   const totals = campaignImpact.reduce(
     (result, campaign) => ({
       spend: result.spend + campaign.spend,
@@ -29,11 +35,18 @@ export default function RevenueImpact() {
     { spend: 0, pipeline: 0, customers: 0, retained: 0, ltv: 0 },
   );
   const maxPipeline = Math.max(
+    1,
     ...campaignImpact.map((campaign) => campaign.pipeline),
   );
-  const conversion =
-    campaignImpact.reduce((sum, campaign) => sum + campaign.customers, 0) /
-    campaignImpact.reduce((sum, campaign) => sum + campaign.accounts, 0);
+  const totalAccountsReached = campaignImpact.reduce(
+    (sum, campaign) => sum + campaign.accounts,
+    0,
+  );
+  const conversion = totalAccountsReached
+    ? totals.customers / totalAccountsReached
+    : 0;
+  const retention = totals.customers ? totals.retained / totals.customers : 0;
+  const efficiency = totals.spend ? totals.pipeline / totals.spend : 0;
 
   return (
     <>
@@ -41,6 +54,15 @@ export default function RevenueImpact() {
         eyebrow={t("revenue.eyebrow")}
         title={t("revenue.title")}
         description={t("revenue.description")}
+        action={
+          <button
+            type="button"
+            onClick={() => setNewCampaignOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/15"
+          >
+            <Plus size={16} /> {t("revenue.newCampaign")}
+          </button>
+        }
       />
       <DemoModeBanner />
 
@@ -65,7 +87,7 @@ export default function RevenueImpact() {
         <MetricCard
           icon={HeartHandshake}
           label={t("revenue.retention")}
-          value={format.number(totals.retained / totals.customers, {
+          value={format.number(retention, {
             style: "percent",
           })}
           change="+6%"
@@ -140,7 +162,7 @@ export default function RevenueImpact() {
               {t("revenue.efficiency")}
             </p>
             <h2 className="mt-3 text-2xl font-semibold">
-              {format.number(totals.pipeline / totals.spend, {
+              {format.number(efficiency, {
                 maximumFractionDigits: 1,
               })}
               ×
@@ -198,6 +220,7 @@ export default function RevenueImpact() {
           </article>
         </div>
       </section>
+      <NewCampaignDialog open={newCampaignOpen} onClose={() => setNewCampaignOpen(false)} />
     </>
   );
 }

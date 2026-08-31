@@ -1015,7 +1015,20 @@
       "pipeline": "قيمة الفرص",
       "tier": "فئة الحساب",
       "empty": "لا توجد حسابات مطابقة للفلاتر.",
-      "open": "فتح حساب {name}"
+      "open": "فتح حساب {name}",
+      "newAccount": "حساب جديد",
+      "newAccountTitle": "إضافة حساب",
+      "newAccountDescription": "تتبّع شركة جديدة في مسار النمو الخاص بك.",
+      "name": "اسم الشركة",
+      "domain": "النطاق",
+      "industry": "القطاع",
+      "employees": "عدد الموظفين",
+      "owner": "المسؤول",
+      "pipelineValue": "قيمة الفرص ($)",
+      "ltv": "القيمة المتوقعة ($)",
+      "cancel": "إلغاء",
+      "create": "إضافة الحساب",
+      "createFailed": "تعذّرت إضافة الحساب"
     },
     "accountDetail": {
       "back": "العودة إلى الحسابات",
@@ -1110,7 +1123,22 @@
       "outcomes": "نتائج الأعمال",
       "lowerCac": "خفض تكلفة الاستحواذ",
       "shorterCycle": "تقصير دورة المبيعات",
-      "activation": "تحسين التفعيل"
+      "activation": "تحسين التفعيل",
+      "newCampaign": "حملة جديدة",
+      "newCampaignTitle": "إضافة حملة",
+      "newCampaignDescription": "تتبّع الإنفاق وأثر قيمة الفرص لبرنامج استحواذ أو دورة حياة جديد.",
+      "name": "اسم الحملة",
+      "channel": "القناة",
+      "spend": "الإنفاق ($)",
+      "accountsReached": "الحسابات المستهدفة",
+      "opportunities": "الفرص",
+      "pipelineValue": "قيمة الفرص ($)",
+      "customers": "العملاء المكتسبون",
+      "retained": "العملاء المحتفظ بهم",
+      "ltvValue": "القيمة المتوقعة ($)",
+      "cancel": "إلغاء",
+      "create": "إضافة الحملة",
+      "createFailed": "تعذّرت إضافة الحملة"
     }
   }
 }
