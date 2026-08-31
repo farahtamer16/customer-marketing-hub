@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
+  ArrowRight,
   ArrowUpRight,
   Building2,
   Headphones,
@@ -12,8 +13,10 @@ import {
   UserRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { journeyStages } from "@/lib/growth-data";
 import type { GrowthAccount } from "@/types/growth";
 import { AccountAvatar, DemoModeBanner } from "./GrowthPrimitives";
@@ -135,6 +138,21 @@ function B2BJourney() {
   const t = useTranslations("growth");
   const growthAccounts = (useQuery(api.growth.listAccounts) ??
     []) as GrowthAccount[];
+  const updateAccount = useMutation(api.growth.updateAccount);
+
+  const advanceStage = async (account: GrowthAccount) => {
+    const index = journeyStages.indexOf(account.stage);
+    const nextStage = journeyStages[index + 1];
+    if (!nextStage) return;
+    try {
+      await updateAccount({
+        accountId: account.id as Id<"growthAccounts">,
+        stage: nextStage,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("journeys.advanceFailed"));
+    }
+  };
 
   return (
     <div className="mt-6 overflow-x-auto pb-2">
@@ -143,6 +161,7 @@ function B2BJourney() {
           const accounts = growthAccounts.filter(
             (account) => account.stage === stage,
           );
+          const isLastStage = index === journeyStages.length - 1;
           return (
             <div
               key={stage}
@@ -161,12 +180,14 @@ function B2BJourney() {
               </p>
               <div className="mt-3 space-y-2">
                 {accounts.map((account) => (
-                  <Link
+                  <div
                     key={account.id}
-                    href={`/growth/accounts/${account.id}`}
-                    className="block rounded-xl border border-white bg-white p-3 shadow-sm hover:border-blue-200"
+                    className="rounded-xl border border-white bg-white p-3 shadow-sm hover:border-blue-200"
                   >
-                    <div className="flex items-center gap-2">
+                    <Link
+                      href={`/growth/accounts/${account.id}`}
+                      className="flex items-center gap-2"
+                    >
                       <AccountAvatar name={account.name} />
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold text-[#071e55]">
@@ -176,8 +197,17 @@ function B2BJourney() {
                           {t("scores.intent")} {account.intentScore}
                         </p>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    {!isLastStage && (
+                      <button
+                        type="button"
+                        onClick={() => advanceStage(account)}
+                        className="mt-2 inline-flex items-center gap-1 text-[0.62rem] font-bold text-[#2854dc] hover:text-[#173b9a]"
+                      >
+                        {t("journeys.advanceStage")} <ArrowRight size={11} className="rtl:rotate-180" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

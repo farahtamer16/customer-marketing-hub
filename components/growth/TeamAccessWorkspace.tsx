@@ -1,16 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
-import { ShieldCheck, UserCheck, UserPlus, UsersRound } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { ShieldCheck, UserCheck, UserPlus, UsersRound, UserX } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
+import { toast } from "sonner";
 import PageHeader from "@/components/hub/PageHeader";
 import DataTable, { dataTableFeatures } from "@/components/ui/DataTable";
 import TableToolbar from "@/components/ui/TableToolbar";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { workspacePermissions, workspaceRoles } from "@/lib/workspace-data";
-import type { WorkspaceMember } from "@/types/growth";
+import type { WorkspaceMember, WorkspaceRole } from "@/types/growth";
 import { MetricCard } from "./GrowthPrimitives";
 import InviteMemberDialog from "./InviteMemberDialog";
 import {
@@ -27,6 +29,8 @@ export default function TeamAccessWorkspace() {
   const format = useFormatter();
   const members = (useQuery(api.team.listMembers) ??
     EMPTY_MEMBERS) as WorkspaceMember[];
+  const updateMemberRole = useMutation(api.team.updateMemberRole);
+  const removeMember = useMutation(api.team.removeMember);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
@@ -72,7 +76,31 @@ export default function TeamAccessWorkspace() {
         id: "role",
         header: t("team.role"),
         accessorFn: (row) => row.role,
-        cell: ({ row }) => <WorkspaceRolePill role={row.original.role} />,
+        cell: ({ row }) => (
+          <select
+            value={row.original.role}
+            onClick={(event) => event.stopPropagation()}
+            onChange={async (event) => {
+              try {
+                await updateMemberRole({
+                  memberId: row.original.id as Id<"teamMembers">,
+                  role: event.target.value as WorkspaceRole,
+                });
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : t("team.updateRoleFailed"),
+                );
+              }
+            }}
+            className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.68rem] font-bold text-slate-700 outline-none focus:border-blue-400"
+          >
+            {workspaceRoles.map((definition) => (
+              <option key={definition.role} value={definition.role}>
+                {t(`workspaceRoles.${definition.role}`)}
+              </option>
+            ))}
+          </select>
+        ),
       },
       {
         id: "status",
@@ -95,8 +123,34 @@ export default function TeamAccessWorkspace() {
           </span>
         ),
       },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={async (event) => {
+              event.stopPropagation();
+              if (!window.confirm(t("team.removeConfirm", { name: row.original.name })))
+                return;
+              try {
+                await removeMember({ memberId: row.original.id as Id<"teamMembers"> });
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : t("team.removeFailed"),
+                );
+              }
+            }}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+            aria-label={t("team.remove", { name: row.original.name })}
+          >
+            <UserX size={15} />
+          </button>
+        ),
+      },
     ],
-    [format, t],
+    [format, removeMember, t, updateMemberRole],
   );
   const active = members.filter((member) => member.status === "active").length;
   const invited = members.filter(

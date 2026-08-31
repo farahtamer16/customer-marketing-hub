@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import PageHeader from "@/components/hub/PageHeader";
@@ -18,6 +18,7 @@ import {
   ScoreMeter,
   SourcePill,
 } from "./GrowthPrimitives";
+import NewLeadDialog from "./NewLeadDialog";
 
 const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 const EMPTY_LEADS: GrowthLead[] = [];
@@ -32,6 +33,7 @@ export default function LeadDirectory() {
   const [search, setSearch] = useState("");
   const [intent, setIntent] = useState("");
   const [source, setSource] = useState("");
+  const [newLeadOpen, setNewLeadOpen] = useState(false);
   const rows = useMemo(
     () =>
       growthLeads.filter((lead) => {
@@ -149,6 +151,15 @@ export default function LeadDirectory() {
         eyebrow={t("leads.eyebrow")}
         title={t("leads.title")}
         description={t("leads.description")}
+        action={
+          <button
+            type="button"
+            onClick={() => setNewLeadOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/15"
+          >
+            <Plus size={16} /> {t("leads.newLead")}
+          </button>
+        }
       />
       <DemoModeBanner />
       <section className="glass-card overflow-hidden rounded-3xl">
@@ -201,6 +212,7 @@ export default function LeadDirectory() {
           pageSize={10}
         />
       </section>
+      <NewLeadDialog open={newLeadOpen} onClose={() => setNewLeadOpen(false)} />
     </>
   );
 }
