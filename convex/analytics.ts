@@ -36,6 +36,8 @@ export const recordAnalytics = mutation({
     likes: v.number(),
     comments: v.number(),
     shares: v.optional(v.number()),
+    reach: v.optional(v.number()),
+    impressions: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const id = await ctx.db.insert("analytics", {
@@ -45,6 +47,8 @@ export const recordAnalytics = mutation({
       likes: args.likes,
       comments: args.comments,
       shares: args.shares ?? 0,
+      reach: args.reach,
+      impressions: args.impressions,
       scrapedAt: Date.now(),
       createdAt: Date.now(),
     });
@@ -78,17 +82,34 @@ export const getOverview = query({
     // Compute totals
     let totalLikes = 0,
       totalComments = 0,
-      totalShares = 0;
+      totalShares = 0,
+      totalReach = 0,
+      totalImpressions = 0;
+    // Engagement rate needs a reach denominator, which not every entry has
+    // (insights can fail independently of likes/comments/shares) — average
+    // only over entries that actually reported reach, rather than treating
+    // a missing reach as zero and understating the rate.
+    let engagementRateSum = 0;
+    let entriesWithReach = 0;
     for (const a of filtered) {
       totalLikes += a.likes;
       totalComments += a.comments;
       totalShares += a.shares ?? 0;
+      totalReach += a.reach ?? 0;
+      totalImpressions += a.impressions ?? 0;
+      if (a.reach && a.reach > 0) {
+        entriesWithReach += 1;
+        engagementRateSum += (a.likes + a.comments + (a.shares ?? 0)) / a.reach;
+      }
     }
 
     const count = filtered.length;
     const avgLikes = count ? Math.round(totalLikes / count) : 0;
     const avgComments = count ? Math.round(totalComments / count) : 0;
     const avgShares = count ? Math.round(totalShares / count) : 0;
+    const avgEngagementRate = entriesWithReach
+      ? engagementRateSum / entriesWithReach
+      : null;
 
     // Get the most recent scraped entry (overall)
     const latest = filtered.length ? filtered.reduce((a, b) => (a.scrapedAt > b.scrapedAt ? a : b)) : null;
@@ -97,9 +118,12 @@ export const getOverview = query({
       totalLikes,
       totalComments,
       totalShares,
+      totalReach,
+      totalImpressions,
       avgLikes,
       avgComments,
       avgShares,
+      avgEngagementRate,
       totalPosts: count,
       latest,
     };

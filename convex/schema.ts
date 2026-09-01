@@ -73,6 +73,13 @@ export default defineSchema({
     likes: v.number(),
     comments: v.number(),
     shares: v.number(),
+    // Pulled from the Graph API's /insights edge (post_impressions/reach for
+    // Facebook, impressions/reach for Instagram). Optional because insights
+    // can fail independently of the base like/comment/share fetch (low
+    // activity, permission edge cases) — a failed insights call shouldn't
+    // block recording the metrics that did succeed.
+    reach: v.optional(v.number()),
+    impressions: v.optional(v.number()),
     scrapedAt: v.number(),
     createdAt: v.number(),
   })

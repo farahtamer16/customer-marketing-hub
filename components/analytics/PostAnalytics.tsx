@@ -3,13 +3,16 @@
 import {
   BarChart3,
   Clock3,
+  Eye,
   Heart,
   Loader2,
   MessageCircleMore,
   RefreshCw,
   Share2,
   Sparkles,
+  TrendingUp,
   TriangleAlert,
+  Users,
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { usePostAnalytics } from "@/hooks/usePostAnalytics";
@@ -44,25 +47,58 @@ export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
     );
   }
 
+  const engagementRate =
+    analytics?.reach && analytics.reach > 0
+      ? (analytics.likes + analytics.comments + (analytics.shares ?? 0)) /
+        analytics.reach
+      : null;
+
   const metrics = analytics
     ? [
         {
           label: t("likes"),
-          value: analytics.likes,
+          value: formatter.number(analytics.likes),
           icon: Heart,
           tone: "bg-rose-50 text-rose-600",
         },
         {
           label: t("comments"),
-          value: analytics.comments,
+          value: formatter.number(analytics.comments),
           icon: MessageCircleMore,
           tone: "bg-cyan-50 text-cyan-700",
         },
         {
           label: t("shares"),
-          value: analytics.shares ?? 0,
+          value: formatter.number(analytics.shares ?? 0),
           icon: Share2,
           tone: "bg-violet-50 text-violet-700",
+        },
+        {
+          label: t("reach"),
+          value:
+            analytics.reach !== undefined
+              ? formatter.number(analytics.reach)
+              : t("notAvailable"),
+          icon: Users,
+          tone: "bg-emerald-50 text-emerald-700",
+        },
+        {
+          label: t("impressions"),
+          value:
+            analytics.impressions !== undefined
+              ? formatter.number(analytics.impressions)
+              : t("notAvailable"),
+          icon: Eye,
+          tone: "bg-amber-50 text-amber-700",
+        },
+        {
+          label: t("engagementRate"),
+          value:
+            engagementRate !== null
+              ? formatter.number(engagementRate, { style: "percent", maximumFractionDigits: 1 })
+              : t("notAvailable"),
+          icon: TrendingUp,
+          tone: "bg-blue-50 text-blue-700",
         },
       ]
     : [];
@@ -134,7 +170,7 @@ export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
                   <Icon size={18} />
                 </span>
                 <p className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-[#071e55]">
-                  {formatter.number(value)}
+                  {value}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">{label}</p>
               </article>

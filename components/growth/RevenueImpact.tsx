@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import {
+  Award,
   BadgeDollarSign,
   ChartNoAxesCombined,
   CircleDollarSign,
   HeartHandshake,
   Plus,
+  Target,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
@@ -18,7 +22,11 @@ import NewCampaignDialog from "./NewCampaignDialog";
 import {
   computeActivationRate,
   computeCacHealthScore,
+  computeChurnRate,
+  computeCostPerLead,
+  computeCostPerResult,
   computeRetentionRate,
+  computeROI,
   computeSalesCycleHealthScore,
 } from "@/lib/growth-metrics";
 
@@ -56,6 +64,10 @@ export default function RevenueImpact() {
     : 0;
   const retention = totals.customers ? totals.retained / totals.customers : 0;
   const efficiency = totals.spend ? totals.pipeline / totals.spend : 0;
+  const churnRate = computeChurnRate(campaignImpact);
+  const roi = computeROI(campaignImpact);
+  const cpl = computeCostPerLead(campaignImpact);
+  const cpr = computeCostPerResult(campaignImpact);
 
   return (
     <>
@@ -109,6 +121,46 @@ export default function RevenueImpact() {
           })}
           tone="bg-amber-50 text-amber-700"
         />
+      </section>
+
+      <section className="mt-6">
+        <h2 className="mb-3 text-sm font-semibold text-[#071e55]">
+          {t("revenue.unitEconomics")}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            icon={TrendingDown}
+            label={t("revenue.churnRate")}
+            value={churnRate === null ? t("metrics.noDataYet") : `${Math.round(churnRate)}%`}
+            tone="bg-rose-50 text-rose-700"
+          />
+          <MetricCard
+            icon={TrendingUp}
+            label={t("revenue.roi")}
+            value={roi === null ? t("metrics.noDataYet") : `${Math.round(roi)}%`}
+            tone="bg-emerald-50 text-emerald-700"
+          />
+          <MetricCard
+            icon={Target}
+            label={t("revenue.cpl")}
+            value={
+              cpl === null
+                ? t("metrics.noDataYet")
+                : format.number(cpl, { style: "currency", currency: "USD", notation: "compact" })
+            }
+            tone="bg-violet-50 text-violet-700"
+          />
+          <MetricCard
+            icon={Award}
+            label={t("revenue.cpr")}
+            value={
+              cpr === null
+                ? t("metrics.noDataYet")
+                : format.number(cpr, { style: "currency", currency: "USD", notation: "compact" })
+            }
+            tone="bg-amber-50 text-amber-700"
+          />
+        </div>
       </section>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">

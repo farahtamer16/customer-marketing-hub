@@ -235,6 +235,12 @@ export const fetchPostAnalytics = action({
       shares = data.shares?.count ?? 0;
     }
 
+    const { reach, impressions } = await fetchInsights(
+      post.platform,
+      post.platformPostId,
+      credentials.accessToken,
+    );
+
     await ctx.runMutation(api.analytics.recordAnalytics, {
       postId: args.postId,
       userId: args.userId,
@@ -242,12 +248,54 @@ export const fetchPostAnalytics = action({
       likes,
       comments,
       shares,
+      reach,
+      impressions,
     });
     await ctx.runMutation(api.posts.markAnalyticsCollected, { postId: args.postId });
 
-    return { success: true, likes, comments, shares };
+    return { success: true, likes, comments, shares, reach, impressions };
   },
 });
+
+// Reach/impressions come from a separate Graph API edge (/insights) than
+// likes/comments/shares, and it's flakier — Meta returns errors for posts
+// below a minimum engagement/audience threshold, or with slightly different
+// metric names/availability per API version. A failure here shouldn't sink
+// the whole analytics refresh, since the base engagement numbers already
+// succeeded by the time this runs — so this returns undefined instead of
+// throwing.
+async function fetchInsights(
+  platform: string,
+  platformPostId: string,
+  accessToken: string,
+): Promise<{ reach?: number; impressions?: number }> {
+  try {
+    if (platform === "Instagram") {
+      const data = await graphGet(`/${platformPostId}/insights`, {
+        metric: "impressions,reach",
+        access_token: accessToken,
+      });
+      const byName = (name: string) =>
+        data.data?.find((entry: { name: string }) => entry.name === name)
+          ?.values?.[0]?.value;
+      return { impressions: byName("impressions"), reach: byName("reach") };
+    }
+
+    const data = await graphGet(`/${platformPostId}/insights`, {
+      metric: "post_impressions,post_impressions_unique",
+      access_token: accessToken,
+    });
+    const byName = (name: string) =>
+      data.data?.find((entry: { name: string }) => entry.name === name)
+        ?.values?.[0]?.value;
+    return {
+      impressions: byName("post_impressions"),
+      reach: byName("post_impressions_unique"),
+    };
+  } catch {
+    return {};
+  }
+}
 
 // Meta's API has no reliable way to resolve an arbitrary pasted post URL to
 // a commentable Graph object id, so this only supports commenting on posts

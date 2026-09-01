@@ -55,6 +55,34 @@ export function computeRetentionRate(campaigns: CampaignImpact[]): number | null
   return (totalRetained / totalCustomers) * 100;
 }
 
+export function computeChurnRate(campaigns: CampaignImpact[]): number | null {
+  const retention = computeRetentionRate(campaigns);
+  if (retention === null) return null;
+  return 100 - retention;
+}
+
+// ROI on the pipeline a campaign influenced, relative to what it cost.
+export function computeROI(campaigns: CampaignImpact[]): number | null {
+  const totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0);
+  const totalPipeline = campaigns.reduce((sum, c) => sum + c.pipeline, 0);
+  if (totalSpend === 0) return null;
+  return ((totalPipeline - totalSpend) / totalSpend) * 100;
+}
+
+// Cost per lead: opportunities are the leads a campaign generated.
+export function computeCostPerLead(campaigns: CampaignImpact[]): number | null {
+  const totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0);
+  const totalOpportunities = campaigns.reduce((sum, c) => sum + c.opportunities, 0);
+  if (totalOpportunities === 0) return null;
+  return totalSpend / totalOpportunities;
+}
+
+// Cost per result: the generic version of CAC, using won customers as the
+// "result." Distinct from CPL, which counts opportunities/leads instead.
+export function computeCostPerResult(campaigns: CampaignImpact[]): number | null {
+  return computeCustomerAcquisitionCost(campaigns);
+}
+
 // LTV:CAC is a standard SaaS unit-economics benchmark — 3:1 is the widely
 // cited healthy ratio (a business earns 3x what it spent acquiring the
 // customer). We score progress toward that benchmark, not toward an

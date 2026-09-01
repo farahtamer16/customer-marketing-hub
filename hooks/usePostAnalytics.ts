@@ -16,7 +16,7 @@ const cooldownKey = (postId: Id<"posts">) =>
 
 type AnalyticsSnapshot = Pick<
   Doc<"analytics">,
-  "likes" | "comments" | "shares" | "scrapedAt"
+  "likes" | "comments" | "shares" | "reach" | "impressions" | "scrapedAt"
 >;
 
 export function usePostAnalytics(postId: Id<"posts">, userId: string) {
@@ -76,6 +76,8 @@ export function usePostAnalytics(postId: Id<"posts">, userId: string) {
         likes: result.likes,
         comments: result.comments,
         shares: result.shares,
+        reach: result.reach,
+        impressions: result.impressions,
         scrapedAt: Date.now(),
       };
       setRefreshedAnalytics(snapshot);

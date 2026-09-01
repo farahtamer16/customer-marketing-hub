@@ -2,11 +2,13 @@
 
 import { useUser } from "@clerk/nextjs";
 import {
+  Eye,
   Heart,
   Loader2,
   MessageCircleMore,
   Share2,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import PageHeader from "@/components/hub/PageHeader";
@@ -18,7 +20,10 @@ import { useFormatter, useTranslations } from "next-intl";
 
 export type AnalyticsRow = {
   post: Doc<"posts">;
-  analytics: Pick<Doc<"analytics">, "likes" | "comments" | "shares"> | null;
+  analytics: Pick<
+    Doc<"analytics">,
+    "likes" | "comments" | "shares" | "reach" | "impressions"
+  > | null;
 };
 
 export default function AnalyticsOverview() {
@@ -69,6 +74,9 @@ function AnalyticsContent({
     totalLikes: number;
     totalComments: number;
     totalShares: number;
+    totalReach: number;
+    totalImpressions: number;
+    avgEngagementRate: number | null;
     totalPosts: number;
   };
 }) {
@@ -78,25 +86,51 @@ function AnalyticsContent({
   const metrics = [
     {
       label: t("likes"),
-      value: overview.totalLikes,
+      value: format.number(overview.totalLikes),
       icon: Heart,
       color: "text-rose-600 bg-rose-50",
     },
     {
       label: t("comments"),
-      value: overview.totalComments,
+      value: format.number(overview.totalComments),
       icon: MessageCircleMore,
       color: "text-cyan-700 bg-cyan-50",
     },
     {
       label: t("shares"),
-      value: overview.totalShares,
+      value: format.number(overview.totalShares),
       icon: Share2,
       color: "text-violet-700 bg-violet-50",
     },
     {
+      label: t("reach"),
+      value: overview.totalReach ? format.number(overview.totalReach) : t("notAvailable"),
+      icon: Users,
+      color: "text-emerald-700 bg-emerald-50",
+    },
+    {
+      label: t("impressions"),
+      value: overview.totalImpressions
+        ? format.number(overview.totalImpressions)
+        : t("notAvailable"),
+      icon: Eye,
+      color: "text-amber-700 bg-amber-50",
+    },
+    {
+      label: t("engagementRate"),
+      value:
+        overview.avgEngagementRate !== null
+          ? format.number(overview.avgEngagementRate, {
+              style: "percent",
+              maximumFractionDigits: 1,
+            })
+          : t("notAvailable"),
+      icon: TrendingUp,
+      color: "text-blue-700 bg-blue-50",
+    },
+    {
       label: t("trackedPosts"),
-      value: overview.totalPosts,
+      value: format.number(overview.totalPosts),
       icon: TrendingUp,
       color: "text-blue-700 bg-blue-50",
     },
@@ -118,7 +152,7 @@ function AnalyticsContent({
               </p>
             </div>
             <p className="mt-5 text-3xl font-semibold tracking-[-0.04em]">
-              {format.number(value)}
+              {value}
             </p>
             <p className="mt-1 text-sm text-slate-500">{label}</p>
           </article>
