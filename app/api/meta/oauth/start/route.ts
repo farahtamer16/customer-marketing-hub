@@ -8,6 +8,15 @@ const META_OAUTH_SCOPES = [
   "pages_manage_posts",
   "pages_manage_metadata",
   "read_insights",
+  // Read the actual text of comments/posts other people left on the Page
+  // (pages_read_engagement alone only covers the Page's own content and
+  // metadata). Also a required dependency of pages_manage_engagement below.
+  "pages_read_user_content",
+  // Publish/edit/delete comments on the Page's own posts — confirmed via
+  // Meta's permissions reference; requesting it without its
+  // pages_read_user_content dependency in the same call gets the whole
+  // OAuth request rejected as "Invalid Scopes".
+  "pages_manage_engagement",
   "instagram_basic",
   "instagram_content_publish",
   "instagram_manage_comments",
