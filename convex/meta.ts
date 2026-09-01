@@ -252,18 +252,30 @@ export const fetchPostAnalytics = action({
 // Meta's API has no reliable way to resolve an arbitrary pasted post URL to
 // a commentable Graph object id, so this only supports commenting on posts
 // this workspace itself published and is tracking (posts.postUrl).
+// Comparison is normalized (trim + drop a trailing slash) since different
+// publish paths have historically stored postUrl with/without one.
+function normalizeUrl(url: string) {
+  return url.trim().replace(/\/+$/, "");
+}
+
 async function findOwnPostByUrl(ctx: ActionCtx, userId: string, targetUrl: string) {
   const posts = await ctx.runQuery(api.posts.getPostsForUser, { userId });
-  return posts.find((post) => post.postUrl === targetUrl) ?? null;
+  const normalizedTarget = normalizeUrl(targetUrl);
+  return {
+    match: posts.find((post) => post.postUrl && normalizeUrl(post.postUrl) === normalizedTarget) ?? null,
+    knownUrls: posts.filter((post) => post.postUrl).map((post) => post.postUrl as string),
+  };
 }
 
 export const publishCommentOnUrl = action({
   args: { userId: v.string(), targetUrl: v.string(), content: v.string() },
   handler: async (ctx, args): Promise<{ commentId: string }> => {
-    const post = await findOwnPostByUrl(ctx, args.userId, args.targetUrl);
+    const { match: post, knownUrls } = await findOwnPostByUrl(ctx, args.userId, args.targetUrl);
     if (!post || !post.platformPostId) {
       throw new Error(
-        "This URL doesn't match one of your published posts. Commenting is only supported on posts published through this workspace.",
+        `This URL doesn't match one of your published posts. Commenting is only supported on posts published through this workspace.\nReceived: "${args.targetUrl}"\nKnown post URLs for this account: ${
+          knownUrls.length ? knownUrls.map((u) => `"${u}"`).join(", ") : "(none — no post has a stored postUrl yet)"
+        }`,
       );
     }
 
@@ -288,7 +300,7 @@ export const processDueComments = internalAction({
     for (const comment of dueComments) {
       await ctx.runMutation(api.comments.markCommentProcessing, { commentId: comment._id });
       try {
-        const post = await findOwnPostByUrl(ctx, comment.userId, comment.targetUrl);
+        const { match: post } = await findOwnPostByUrl(ctx, comment.userId, comment.targetUrl);
         if (!post || !post.platformPostId) {
           throw new Error("Target post is not one of this workspace's published posts");
         }
