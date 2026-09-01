@@ -21,10 +21,12 @@ export default function CreatePage() {
 
   const [isPosting, setIsPosting] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
+  const [isSubmittingForApproval, setIsSubmittingForApproval] = useState(false);
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const finalizeUpload = useMutation(api.files.finalizeUpload);
   const schedulePost = useMutation(api.posts.schedulePost);
+  const createApprovalPost = useMutation(api.approvals.createPost);
   const publishFacebookPost = useAction(api.meta.publishFacebookPost);
   const publishInstagramPost = useAction(api.meta.publishInstagramPost);
 
@@ -167,6 +169,52 @@ export default function CreatePage() {
     }
   };
 
+  const handleSubmitForApproval = async (
+    content: string,
+    platforms: Platform[],
+    image?: File,
+  ) => {
+    if (!userId) {
+      toast.error(t("loginRequired"));
+      return;
+    }
+    const channels = platforms
+      .filter((platform): platform is "Facebook" | "Instagram" =>
+        platform === "Facebook" || platform === "Instagram",
+      )
+      .map((platform) => platform.toLowerCase() as "facebook" | "instagram");
+    if (channels.length === 0) {
+      toast.error(t("approvalChannelsUnsupported"));
+      return;
+    }
+    if (channels.includes("instagram") && !image) {
+      toast.error(t("instagramImageRequired"));
+      return;
+    }
+
+    setIsSubmittingForApproval(true);
+    try {
+      const storageId = image ? await uploadImage(image) : undefined;
+      await createApprovalPost({
+        author: user?.fullName ?? user?.username ?? "Workspace member",
+        campaign: content.length > 60 ? `${content.slice(0, 57)}...` : content,
+        content,
+        channels,
+        priority: "standard",
+        storageId,
+        steps: [
+          { id: crypto.randomUUID(), role: "ownerAdmin", assignee: t("workspaceOwner") },
+        ],
+      });
+      toast.success(t("submittedForApproval"));
+      router.push("/growth/approvals");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setIsSubmittingForApproval(false);
+    }
+  };
+
   const handleClose = () => {
     router.push("/home");
   };
@@ -177,8 +225,10 @@ export default function CreatePage() {
       onClose={handleClose}
       onPost={handlePost}
       onSchedule={handleSchedule}
+      onSubmitForApproval={handleSubmitForApproval}
       isPosting={isPosting}
       isScheduling={isScheduling}
+      isSubmittingForApproval={isSubmittingForApproval}
     />
   );
 }

@@ -45,6 +45,7 @@ export interface ApprovalPost {
   submittedAt: number;
   steps: ApprovalStep[];
   history: ApprovalHistoryEntry[];
+  publishError?: string;
 }
 
 export interface WorkspaceNotification {

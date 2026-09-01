@@ -429,7 +429,12 @@
     "chooseOption": "اختر خيارًا:",
     "apply": "تطبيق",
     "replyInserted": "تم إدراج الرد!",
-    "captionInserted": "تم إدراج النص!"
+    "captionInserted": "تم إدراج النص!",
+    "submitForApproval": "إرسال للموافقة",
+    "submittingForApproval": "جارٍ الإرسال…",
+    "submittedForApproval": "تم الإرسال للموافقة",
+    "approvalChannelsUnsupported": "الموافقة متاحة حاليًا لفيسبوك وإنستغرام فقط.",
+    "workspaceOwner": "مالك مساحة العمل"
   },
   "profile": {
     "eyebrow": "الحساب",
@@ -962,7 +967,8 @@
       "confirm": "تأكيد القرار",
       "resetDemo": "إعادة قرار النسخة التجريبية",
       "activity": "نشاط الموافقة",
-      "demoReviewer": "مراجع تجريبي"
+      "demoReviewer": "مراجع تجريبي",
+      "publishFailed": "تمت الموافقة على هذا المنشور لكن فشل نشره"
     },
     "approvalSteps": {
       "waiting": "بانتظار الدور",

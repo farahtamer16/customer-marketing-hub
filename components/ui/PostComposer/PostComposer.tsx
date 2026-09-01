@@ -35,8 +35,14 @@ interface PostComposerProps {
     targetUrl?: string,
     image?: File,
   ) => void;
+  onSubmitForApproval?: (
+    content: string,
+    platforms: Platform[],
+    image?: File,
+  ) => void;
   isPosting?: boolean;
   isScheduling?: boolean;
+  isSubmittingForApproval?: boolean;
   mode?: "post" | "comment";
   initialTargetUrl?: string;
 }
@@ -46,8 +52,10 @@ export function PostComposer({
   onClose,
   onPost,
   onSchedule,
+  onSubmitForApproval,
   isPosting = false,
   isScheduling = false,
+  isSubmittingForApproval = false,
   mode = "post",
   initialTargetUrl = "",
 }: PostComposerProps) {
@@ -153,6 +161,13 @@ export function PostComposer({
         mode === "comment" ? targetUrl : undefined,
         image ?? undefined,
       );
+    }
+  };
+
+  const handleSubmitForApproval = () => {
+    if (onSubmitForApproval && content.trim()) {
+      const platforms = selectedChannelConfigs.map((item) => item.platform);
+      onSubmitForApproval(content, platforms, image ?? undefined);
     }
   };
 
@@ -322,6 +337,10 @@ export function PostComposer({
             selectedChannels.length === 0 ||
             (mode === "comment" && !targetUrl.trim())
           }
+          onSubmitForApproval={
+            mode === "post" && onSubmitForApproval ? handleSubmitForApproval : undefined
+          }
+          isSubmittingForApproval={isSubmittingForApproval}
         />
       </div>
     </div>

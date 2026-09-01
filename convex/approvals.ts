@@ -1,5 +1,7 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { requireMember, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
@@ -32,6 +34,7 @@ export const createPost = mutation({
     channels: v.array(v.union(v.literal("facebook"), v.literal("instagram"))),
     priority: v.union(v.literal("standard"), v.literal("high")),
     scheduledAt: v.optional(v.number()),
+    storageId: v.optional(v.id("_storage")),
     steps: v.array(
       v.object({
         id: v.string(),
@@ -47,11 +50,15 @@ export const createPost = mutation({
     const identity = await ctx.auth.getUserIdentity();
     const actor = identity?.name ?? args.author;
 
-    return await ctx.db.insert("approvalPosts", {
+    const postId = await ctx.db.insert("approvalPosts", {
       author: args.author,
+      // Derived from the caller's own authenticated identity, not trusted
+      // from the client — this is who publishing will run as once approved.
+      authorUserId: identity?.subject,
       campaign: args.campaign,
       content: args.content,
       channels: args.channels,
+      storageId: args.storageId,
       priority: args.priority,
       scheduledAt: args.scheduledAt,
       status: "pending",
@@ -67,6 +74,17 @@ export const createPost = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    await ctx.db.insert("workspaceNotifications", {
+      kind: "approval",
+      title: `${args.campaign} needs approval`,
+      detail: `${actor} submitted a post awaiting ${args.steps[0]?.role ?? "review"}.`,
+      occurredAt: now,
+      read: false,
+      href: `/growth/approvals/${postId}`,
+    });
+
+    return postId;
   },
 });
 
@@ -153,6 +171,111 @@ export const decide = mutation({
         target: post.campaign,
         occurredAt: now,
       });
+      await ctx.scheduler.runAfter(0, internal.approvals.publishApprovedPost, {
+        postId: args.postId,
+      });
+    } else if (args.decision !== "approve") {
+      await ctx.db.insert("workspaceNotifications", {
+        kind: "approval",
+        title:
+          args.decision === "reject"
+            ? `${post.campaign} was rejected`
+            : `${post.campaign} needs changes`,
+        detail: `${actor} ${historyAction === "rejected" ? "rejected" : "requested changes on"} this post.`,
+        occurredAt: now,
+        read: false,
+        href: `/growth/approvals/${args.postId}`,
+      });
     }
+  },
+});
+
+// Runs once every approval step signs off. Publishing is an action (it
+// makes real HTTP calls to Meta), which a mutation like `decide` above
+// can't do directly — so `decide` schedules this instead of calling it.
+export const publishApprovedPost = internalAction({
+  args: { postId: v.id("approvalPosts") },
+  handler: async (ctx, args): Promise<void> => {
+    const post = await ctx.runQuery(api.approvals.getPost, { postId: args.postId });
+    if (!post) return;
+
+    if (!post.authorUserId) {
+      await ctx.runMutation(internal.approvals.markPublishResult, {
+        postId: args.postId,
+        publishError:
+          "This approval was created before author tracking existed, so it can't be auto-published — publish it manually.",
+      });
+      return;
+    }
+
+    const errors: string[] = [];
+    let resultingPostId: Id<"posts"> | undefined;
+
+    for (const channel of post.channels) {
+      try {
+        if (channel === "facebook") {
+          const result = await ctx.runAction(api.meta.publishFacebookPost, {
+            userId: post.authorUserId,
+            content: post.content,
+            storageId: post.storageId,
+          });
+          resultingPostId = result.postId;
+        } else {
+          if (!post.storageId) {
+            errors.push("instagram: an image is required and none was attached");
+            continue;
+          }
+          const result = await ctx.runAction(api.meta.publishInstagramPost, {
+            userId: post.authorUserId,
+            caption: post.content,
+            storageId: post.storageId,
+          });
+          resultingPostId = result.postId;
+        }
+      } catch (error) {
+        errors.push(`${channel}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    await ctx.runMutation(internal.approvals.markPublishResult, {
+      postId: args.postId,
+      resultingPostId,
+      publishError: errors.length > 0 ? errors.join("; ") : undefined,
+      published: resultingPostId !== undefined,
+    });
+  },
+});
+
+export const markPublishResult = internalMutation({
+  args: {
+    postId: v.id("approvalPosts"),
+    resultingPostId: v.optional(v.id("posts")),
+    publishError: v.optional(v.string()),
+    published: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.postId);
+    if (!post) return;
+    const now = Date.now();
+
+    await ctx.db.patch(args.postId, {
+      status: args.published ? "published" : post.status,
+      resultingPostId: args.resultingPostId,
+      publishError: args.publishError,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("workspaceNotifications", {
+      kind: args.published ? "approval" : "system",
+      title: args.published
+        ? `${post.campaign} is now live`
+        : `${post.campaign} failed to publish`,
+      detail: args.published
+        ? `Approved post published to ${post.channels.join(", ")}.`
+        : (args.publishError ?? "Publishing failed for an unknown reason."),
+      occurredAt: now,
+      read: false,
+      href: `/growth/approvals/${args.postId}`,
+    });
   },
 });

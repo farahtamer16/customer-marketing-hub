@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "convex/react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
@@ -57,6 +57,16 @@ export default function ApprovalReview({ post }: { post: ApprovalPost }) {
         {t("approvalReview.back")}
       </Link>
       <PrototypeNotices />
+
+      {post.publishError && (
+        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <TriangleAlert className="mt-0.5 shrink-0" size={17} />
+          <div>
+            <p className="font-semibold">{t("approvalReview.publishFailed")}</p>
+            <p className="mt-1 text-xs leading-5">{post.publishError}</p>
+          </div>
+        </div>
+      )}
 
       <section className="glass-card mt-6 overflow-hidden rounded-3xl">
         <div className="h-1.5 bg-gradient-to-r from-[#173b9a] via-[#526ff2] to-[#a9ffe0]" />

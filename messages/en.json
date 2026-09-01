@@ -433,7 +433,12 @@
     "chooseOption": "Choose an option:",
     "apply": "Apply",
     "replyInserted": "Reply inserted!",
-    "captionInserted": "Caption inserted!"
+    "captionInserted": "Caption inserted!",
+    "submitForApproval": "Submit for approval",
+    "submittingForApproval": "Submitting…",
+    "submittedForApproval": "Sent for approval",
+    "approvalChannelsUnsupported": "Approval is only available for Facebook and Instagram right now.",
+    "workspaceOwner": "Workspace owner"
   },
   "profile": {
     "eyebrow": "Account",
@@ -966,7 +971,8 @@
       "confirm": "Confirm decision",
       "resetDemo": "Reset prototype decision",
       "activity": "Approval activity",
-      "demoReviewer": "Demo reviewer"
+      "demoReviewer": "Demo reviewer",
+      "publishFailed": "This post was approved but failed to publish"
     },
     "approvalSteps": {
       "waiting": "Waiting",

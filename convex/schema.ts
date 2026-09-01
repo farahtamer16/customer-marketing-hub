@@ -298,9 +298,17 @@ export default defineSchema({
 
   approvalPosts: defineTable({
     author: v.string(),
+    // The Clerk user id to publish as once every step approves — derived
+    // server-side from the submitter's identity, not client-supplied.
+    // Optional since posts created before this field existed have none;
+    // those can't be auto-published, only manually.
+    authorUserId: v.optional(v.string()),
     campaign: v.string(),
     content: v.string(),
     channels: v.array(v.union(v.literal("facebook"), v.literal("instagram"))),
+    storageId: v.optional(v.id("_storage")),
+    resultingPostId: v.optional(v.id("posts")),
+    publishError: v.optional(v.string()),
     status: v.union(
       v.literal("draft"),
       v.literal("pending"),
