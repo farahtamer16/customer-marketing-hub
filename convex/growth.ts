@@ -3,7 +3,22 @@ import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./authz";
-import { computeAccountScores } from "./scoring";
+import { computeAccountScores, computeMemberScore } from "./scoring";
+
+// A lead's score is never client-supplied — it's this account's real
+// intent score, scaled by how much that buying role typically influences
+// a purchase decision. Re-run every time the account's signals change so
+// leads stay in sync with the same real data driving the account score,
+// instead of freezing at whatever number was true when they were added.
+function recomputeMemberScores(
+  members: Doc<"growthAccounts">["members"],
+  intentScore: number,
+) {
+  return members.map((member) => ({
+    ...member,
+    score: computeMemberScore(member.role, intentScore),
+  }));
+}
 
 // Shared by every place that auto-logs a signal (as opposed to a user
 // filling in the "Log a signal" dialog by hand): appends the signal and
@@ -19,8 +34,10 @@ async function appendSignalToAccount(
     members: account.members,
     signals,
   });
+  const members = recomputeMemberScores(account.members, scores.intentScore);
   await ctx.db.patch(account._id, {
     signals,
+    members,
     ...scores,
     updatedAt: Date.now(),
   });
@@ -89,7 +106,9 @@ export const listLeads = query({
   },
 });
 
-const buyingMember = v.object({
+// No `score` here — a lead's score is always server-computed (see
+// recomputeMemberScores above), never entered by whoever adds them.
+const buyingMemberInput = v.object({
   id: v.string(),
   name: v.string(),
   title: v.string(),
@@ -99,7 +118,6 @@ const buyingMember = v.object({
     v.literal("user"),
     v.literal("technicalEvaluator"),
   ),
-  score: v.number(),
   email: v.string(),
   status: v.union(v.literal("active"), v.literal("missing"), v.literal("atRisk")),
 });
@@ -211,6 +229,7 @@ export const updateAccount = mutation({
       members: account.members,
       signals: account.signals,
     });
+    const members = recomputeMemberScores(account.members, scores.intentScore);
     const now = Date.now();
     const stageChanged = patch.stage !== undefined && patch.stage !== account.stage;
     const stageHistory = stageChanged
@@ -219,6 +238,7 @@ export const updateAccount = mutation({
 
     await ctx.db.patch(accountId, {
       ...patch,
+      members,
       ...scores,
       ...(stageHistory ? { stageHistory } : {}),
       updatedAt: now,
@@ -240,9 +260,11 @@ export const addSignal = mutation({
       members: account.members,
       signals,
     });
+    const members = recomputeMemberScores(account.members, scores.intentScore);
 
     await ctx.db.patch(args.accountId, {
       signals,
+      members,
       ...scores,
       updatedAt: Date.now(),
     });
@@ -250,19 +272,20 @@ export const addSignal = mutation({
 });
 
 export const addMember = mutation({
-  args: { accountId: v.id("growthAccounts"), member: buyingMember },
+  args: { accountId: v.id("growthAccounts"), member: buyingMemberInput },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageLeads");
 
     const account = await ctx.db.get(args.accountId);
     if (!account) throw new Error("Account not found");
 
-    const members = [...account.members, args.member];
+    const membersBeforeScoring = [...account.members, { ...args.member, score: 0 }];
     const scores = computeAccountScores({
       stage: account.stage,
-      members,
+      members: membersBeforeScoring,
       signals: account.signals,
     });
+    const members = recomputeMemberScores(membersBeforeScoring, scores.intentScore);
 
     await ctx.db.patch(args.accountId, {
       members,

@@ -1057,6 +1057,7 @@
       "personTitle": "Title",
       "email": "Email",
       "score": "Lead score (0–100)",
+      "scoreComputedNotice": "Lead score isn't entered manually — it's computed from this account's real intent score, weighted by how much this role typically influences a buying decision.",
       "cancel": "Cancel",
       "create": "Add lead",
       "createFailed": "Failed to add lead"
@@ -1135,12 +1136,9 @@
       "name": "Campaign name",
       "channel": "Channel",
       "spend": "Spend ($)",
-      "accountsReached": "Accounts reached",
-      "opportunities": "Opportunities",
-      "pipelineValue": "Pipeline value ($)",
-      "customers": "Customers won",
-      "retained": "Customers retained",
-      "ltvValue": "Projected LTV ($)",
+      "linkAccounts": "Accounts influenced",
+      "linkAccountsHint": "Pipeline, opportunities, customers, and LTV are computed from the real accounts you link here — not typed in separately.",
+      "noAccountsToLink": "No accounts yet — create one first to link it to a campaign.",
       "cancel": "Cancel",
       "create": "Add campaign",
       "createFailed": "Failed to add campaign"

@@ -37,7 +37,6 @@ export default function NewLeadDialog({
   const [title, setTitle] = useState("");
   const [role, setRole] = useState<BuyingRole>("user");
   const [email, setEmail] = useState("");
-  const [score, setScore] = useState("50");
   const [submitting, setSubmitting] = useState(false);
   const valid = accountId && name.trim().length >= 2 && title.trim().length >= 2;
 
@@ -58,7 +57,6 @@ export default function NewLeadDialog({
     setTitle("");
     setRole("user");
     setEmail("");
-    setScore("50");
   };
 
   const submit = async (event: React.FormEvent) => {
@@ -73,7 +71,6 @@ export default function NewLeadDialog({
           name: name.trim(),
           title: title.trim(),
           role,
-          score: Math.min(100, Math.max(0, Number(score) || 0)),
           email: email.trim(),
           status: "active",
         },
@@ -164,33 +161,23 @@ export default function NewLeadDialog({
                 />
               </label>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-semibold text-slate-700">
-                {t("leads.role")}
-                <select
-                  value={role}
-                  onChange={(event) => setRole(event.target.value as BuyingRole)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                >
-                  {buyingRoles.map((value) => (
-                    <option key={value} value={value}>
-                      {t(`roles.${value}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                {t("leads.score")}
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={score}
-                  onChange={(event) => setScore(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                />
-              </label>
-            </div>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("leads.role")}
+              <select
+                value={role}
+                onChange={(event) => setRole(event.target.value as BuyingRole)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              >
+                {buyingRoles.map((value) => (
+                  <option key={value} value={value}>
+                    {t(`roles.${value}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="rounded-xl bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-800">
+              {t("leads.scoreComputedNotice")}
+            </p>
             <label className="block text-sm font-semibold text-slate-700">
               {t("leads.email")}
               <input

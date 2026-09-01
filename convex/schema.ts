@@ -268,6 +268,12 @@ export default defineSchema({
       v.literal("support"),
     ),
     spend: v.number(),
+    // No real ad-spend data source exists (no Marketing API integration),
+    // so spend stays manual entry — everything below it doesn't have to.
+    // accounts/opportunities/pipeline/customers/retained/ltv are stored as
+    // 0 and computed at query time from accountIds' real account data
+    // whenever accounts are actually linked (see campaigns.listCampaigns).
+    accountIds: v.optional(v.array(v.id("growthAccounts"))),
     accounts: v.number(),
     opportunities: v.number(),
     pipeline: v.number(),

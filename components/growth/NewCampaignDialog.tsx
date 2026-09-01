@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Megaphone, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { signalSources } from "@/lib/growth-data";
-import type { SignalSource } from "@/types/growth";
+import type { GrowthAccount, SignalSource } from "@/types/growth";
+import { StagePill } from "./GrowthPrimitives";
+
+const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 
 export default function NewCampaignDialog({
   open,
@@ -18,15 +22,12 @@ export default function NewCampaignDialog({
 }) {
   const t = useTranslations("growth");
   const createCampaign = useMutation(api.campaigns.createCampaign);
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    EMPTY_ACCOUNTS) as GrowthAccount[];
   const [name, setName] = useState("");
   const [channel, setChannel] = useState<SignalSource>("social");
   const [spend, setSpend] = useState("");
-  const [accounts, setAccounts] = useState("");
-  const [opportunities, setOpportunities] = useState("");
-  const [pipeline, setPipeline] = useState("");
-  const [customers, setCustomers] = useState("");
-  const [retained, setRetained] = useState("");
-  const [ltv, setLtv] = useState("");
+  const [accountIds, setAccountIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const valid = name.trim().length >= 2;
 
@@ -45,12 +46,13 @@ export default function NewCampaignDialog({
     setName("");
     setChannel("social");
     setSpend("");
-    setAccounts("");
-    setOpportunities("");
-    setPipeline("");
-    setCustomers("");
-    setRetained("");
-    setLtv("");
+    setAccountIds([]);
+  };
+
+  const toggleAccount = (id: string) => {
+    setAccountIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
   };
 
   const submit = async (event: React.FormEvent) => {
@@ -62,12 +64,9 @@ export default function NewCampaignDialog({
         name: name.trim(),
         channel,
         spend: Number(spend) || 0,
-        accounts: Number(accounts) || 0,
-        opportunities: Number(opportunities) || 0,
-        pipeline: Number(pipeline) || 0,
-        customers: Number(customers) || 0,
-        retained: Number(retained) || 0,
-        ltv: Number(ltv) || 0,
+        accountIds: accountIds.length
+          ? (accountIds as Id<"growthAccounts">[])
+          : undefined,
       });
       reset();
       onClose();
@@ -140,80 +139,51 @@ export default function NewCampaignDialog({
               </select>
             </label>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("revenue.spend")}
-              <input
-                type="number"
-                min={0}
-                value={spend}
-                onChange={(event) => setSpend(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("revenue.accountsReached")}
-              <input
-                type="number"
-                min={0}
-                value={accounts}
-                onChange={(event) => setAccounts(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("revenue.opportunities")}
-              <input
-                type="number"
-                min={0}
-                value={opportunities}
-                onChange={(event) => setOpportunities(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("revenue.pipelineValue")}
-              <input
-                type="number"
-                min={0}
-                value={pipeline}
-                onChange={(event) => setPipeline(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("revenue.customers")}
-              <input
-                type="number"
-                min={0}
-                value={customers}
-                onChange={(event) => setCustomers(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("revenue.retained")}
-              <input
-                type="number"
-                min={0}
-                value={retained}
-                onChange={(event) => setRetained(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-          </div>
           <label className="block text-sm font-semibold text-slate-700">
-            {t("revenue.ltvValue")}
+            {t("revenue.spend")}
             <input
               type="number"
               min={0}
-              value={ltv}
-              onChange={(event) => setLtv(event.target.value)}
+              value={spend}
+              onChange={(event) => setSpend(event.target.value)}
               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             />
           </label>
+
+          <div>
+            <p className="text-sm font-semibold text-slate-700">
+              {t("revenue.linkAccounts")}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              {t("revenue.linkAccountsHint")}
+            </p>
+            {growthAccounts.length === 0 ? (
+              <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                {t("revenue.noAccountsToLink")}
+              </p>
+            ) : (
+              <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                {growthAccounts.map((account) => (
+                  <label
+                    key={account.id}
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-slate-50"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={accountIds.includes(account.id)}
+                        onChange={() => toggleAccount(account.id)}
+                        className="h-4 w-4 accent-[#3156dc]"
+                      />
+                      <span className="font-medium text-slate-700">{account.name}</span>
+                    </span>
+                    <StagePill stage={account.stage} />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
             <button
               type="button"

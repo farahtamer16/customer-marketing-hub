@@ -146,6 +146,24 @@ export function computeNextAction(
   return "shareSecurityGuide";
 }
 
+// A lead's own "will they buy" score isn't typed in by hand — it's derived
+// from the account's own real, signal-driven intent score, scaled by how
+// much that buying role typically influences a B2B purchase decision. A
+// decision-maker at a hot account scores higher than a day-to-day user at
+// the same account; either way it's the account's real intent score doing
+// the driving, not a guess.
+const ROLE_BUYING_WEIGHT: Record<BuyingRole, number> = {
+  decisionMaker: 1.1,
+  champion: 1.0,
+  technicalEvaluator: 0.8,
+  user: 0.7,
+};
+
+export function computeMemberScore(role: BuyingRole, accountIntentScore: number): number {
+  const score = accountIntentScore * ROLE_BUYING_WEIGHT[role];
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 export function computeAccountScores(account: ScoringAccount, now = Date.now()) {
   const buyingGroupCoverage = computeBuyingGroupCoverage(account.members);
   const intentScore = computeIntentScore(account, now);
