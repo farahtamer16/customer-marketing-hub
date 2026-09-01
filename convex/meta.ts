@@ -32,6 +32,35 @@ async function graphGet(path: string, params: Record<string, string>) {
   return data;
 }
 
+// Creating an Instagram media container just queues Meta's servers to
+// download and process the image — it isn't ready to publish immediately.
+// Calling media_publish before it finishes returns "(#9007) Media ID is
+// not available", which reads like a random intermittent failure (it
+// depends on image size / how fast Meta processes it) but is really a
+// missing wait step. Poll status_code until it's FINISHED before
+// publishing, instead of firing media_publish right after creation.
+async function waitForInstagramContainerReady(
+  containerId: string,
+  accessToken: string,
+) {
+  const maxAttempts = 10;
+  const delayMs = 2000;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const status = await graphGet(`/${containerId}`, {
+      fields: "status_code",
+      access_token: accessToken,
+    });
+    if (status.status_code === "FINISHED") return;
+    if (status.status_code === "ERROR") {
+      throw new Error("Instagram failed to process the uploaded image.");
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error(
+    "Instagram is still processing the image — try publishing again in a moment.",
+  );
+}
+
 async function resolveImageUrl(ctx: ActionCtx, storageId?: Id<"_storage">) {
   if (!storageId) return undefined;
   const url = await ctx.storage.getUrl(storageId);
@@ -100,6 +129,7 @@ export const publishInstagramPost = action({
       caption: args.caption,
       access_token: credentials.accessToken,
     });
+    await waitForInstagramContainerReady(created.id, credentials.accessToken);
     const published = await graphFetch(`/${credentials.platformAccountId}/media_publish`, {
       creation_id: created.id,
       access_token: credentials.accessToken,
@@ -154,6 +184,7 @@ export const publishScheduledPost = action({
           caption: post.content,
           access_token: credentials.accessToken,
         });
+        await waitForInstagramContainerReady(created.id, credentials.accessToken);
         const published = await graphFetch(`/${credentials.platformAccountId}/media_publish`, {
           creation_id: created.id,
           access_token: credentials.accessToken,
