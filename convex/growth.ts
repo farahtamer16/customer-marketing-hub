@@ -1,8 +1,30 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./authz";
 import { computeAccountScores } from "./scoring";
+
+// Shared by every place that auto-logs a signal (as opposed to a user
+// filling in the "Log a signal" dialog by hand): appends the signal and
+// recomputes the account's scores in one patch, same as the manual path.
+async function appendSignalToAccount(
+  ctx: MutationCtx,
+  account: Doc<"growthAccounts">,
+  signal: Doc<"growthAccounts">["signals"][number],
+) {
+  const signals = [signal, ...account.signals];
+  const scores = computeAccountScores({
+    stage: account.stage,
+    members: account.members,
+    signals,
+  });
+  await ctx.db.patch(account._id, {
+    signals,
+    ...scores,
+    updatedAt: Date.now(),
+  });
+}
 
 function toAccount(doc: Doc<"growthAccounts">) {
   return {
@@ -100,6 +122,7 @@ const growthSignal = v.object({
     v.literal("demoRequested"),
     v.literal("trialStarted"),
     v.literal("postCreated"),
+    v.literal("productLogin"),
     v.literal("teamInvited"),
     v.literal("supportOpened"),
     v.literal("supportResolved"),
@@ -254,5 +277,94 @@ export const deleteAccount = mutation({
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageLeads");
     await ctx.db.delete(args.accountId);
+  },
+});
+
+// Auto-logs a real "product" signal on whichever growth account(s) share
+// the given email's domain — this is what makes adoption scoring track
+// actual product usage (a real sign-in, a real published post) instead of
+// only moving when someone remembers to log a signal by hand. Internal
+// only: called from team.ensureCurrentMember (login) and
+// posts.recordPublishedPost (post created), never reachable from the
+// client directly, so there's no permission check to bypass.
+export const logProductSignal = internalMutation({
+  args: {
+    email: v.string(),
+    kind: v.union(v.literal("postCreated"), v.literal("productLogin")),
+  },
+  handler: async (ctx, args) => {
+    const domain = args.email.split("@")[1]?.toLowerCase().trim();
+    if (!domain) return;
+
+    const accounts = await ctx.db.query("growthAccounts").collect();
+    const matches = accounts.filter(
+      (account) => account.domain.toLowerCase().trim() === domain,
+    );
+    if (matches.length === 0) return;
+
+    const now = Date.now();
+    // Logins happen far more often than the underlying behavior actually
+    // changes (every page load re-runs this) — cap it to once per 12h per
+    // account so the signal reflects "they used it today," not "they had
+    // the tab open." Post-creation has no such guard: publishing a post is
+    // never accidental or rapid-fire, so each one is a genuine event.
+    const loginCooldownMs = 12 * 60 * 60 * 1000;
+    for (const account of matches) {
+      if (args.kind === "productLogin") {
+        const recentLogin = account.signals.find(
+          (existing) =>
+            existing.kind === "productLogin" &&
+            now - existing.occurredAt < loginCooldownMs,
+        );
+        if (recentLogin) continue;
+      }
+
+      await appendSignalToAccount(ctx, account, {
+        id: `${now}-${args.kind}-${Math.random().toString(36).slice(2, 8)}`,
+        source: "product",
+        kind: args.kind,
+        occurredAt: now,
+      });
+    }
+  },
+});
+
+// Best-effort intent signal from inbound social comments: if a commenter's
+// display name matches a buying-group member's name on a tracked account,
+// a Lead/Question-classified comment from them is logged as real intent.
+// Honest limitation: name matching is approximate (nothing else in a
+// social comment reliably ties back to a company — no email, no domain) —
+// this will miss people whose social display name differs from what's on
+// file, and could rarely mismatch on a common name shared by two people.
+export const logSocialSignalForCommenter = internalMutation({
+  args: {
+    authorName: v.string(),
+    classification: v.string(),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    if (args.classification !== "Lead" && args.classification !== "Question") return;
+    const name = args.authorName.trim().toLowerCase();
+    if (!name) return;
+
+    const accounts = await ctx.db.query("growthAccounts").collect();
+    const matches = accounts.filter((account) =>
+      account.members.some(
+        (member) =>
+          member.status !== "missing" && member.name.trim().toLowerCase() === name,
+      ),
+    );
+    if (matches.length === 0) return;
+
+    const now = Date.now();
+    for (const account of matches) {
+      await appendSignalToAccount(ctx, account, {
+        id: `${now}-socialQuestion-${Math.random().toString(36).slice(2, 8)}`,
+        source: "social",
+        kind: "socialQuestion",
+        occurredAt: now,
+        detail: args.content.slice(0, 140),
+      });
+    }
   },
 });

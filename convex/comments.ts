@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-
+import { internal } from "./_generated/api";
 
 export const storeComments = mutation({
   args: {
@@ -28,6 +28,14 @@ export const storeComments = mutation({
         classification: c.classification,
         status: "Published",
         createdAt: c.scrapedAt,
+      });
+
+      // Best-effort: a Lead/Question comment from someone whose name
+      // matches a tracked account's buying-group member is real intent.
+      await ctx.runMutation(internal.growth.logSocialSignalForCommenter, {
+        authorName: c.authorName,
+        classification: c.classification,
+        content: c.content,
       });
     }
   },

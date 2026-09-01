@@ -235,22 +235,38 @@ function B2BJourney() {
 
 function ConsumerJourney() {
   const t = useTranslations("growth");
+  const funnel = useQuery(api.consumerJourney.listFunnel);
+  const totalVisitors = funnel
+    ? Object.values(funnel).reduce((sum: number, count: number) => sum + count, 0)
+    : 0;
 
   return (
-    <div className="mt-6 grid gap-3 md:grid-cols-5">
-      {consumerStages.map((stage, index) => (
-        <article key={stage} className="rounded-2xl bg-slate-50/80 p-4">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3556d9] shadow-sm">
-            {index + 1}
-          </span>
-          <h3 className="mt-4 text-sm font-semibold text-[#071e55]">
-            {t(`journeys.consumerStages.${stage}`)}
-          </h3>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            {t(`journeys.consumerHints.${stage}`)}
-          </p>
-        </article>
-      ))}
+    <div className="mt-6">
+      {funnel !== undefined && totalVisitors === 0 && (
+        <p className="mb-3 rounded-xl bg-amber-50 px-4 py-2.5 text-xs font-medium text-amber-800">
+          {t("journeys.consumerNoData")}
+        </p>
+      )}
+      <div className="grid gap-3 md:grid-cols-5">
+        {consumerStages.map((stage, index) => (
+          <article key={stage} className="rounded-2xl bg-slate-50/80 p-4">
+            <div className="flex items-center justify-between">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-bold text-[#3556d9] shadow-sm">
+                {index + 1}
+              </span>
+              <span className="text-lg font-semibold text-[#071e55]">
+                {funnel ? funnel[stage] : "—"}
+              </span>
+            </div>
+            <h3 className="mt-4 text-sm font-semibold text-[#071e55]">
+              {t(`journeys.consumerStages.${stage}`)}
+            </h3>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              {t(`journeys.consumerHints.${stage}`)}
+            </p>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

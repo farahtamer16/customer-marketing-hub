@@ -27,6 +27,7 @@ export type SignalKind =
   | "demoRequested"
   | "trialStarted"
   | "postCreated"
+  | "productLogin"
   | "teamInvited"
   | "supportOpened"
   | "supportResolved"

@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { requirePermission } from "./authz";
 
 const workspaceRole = v.union(
@@ -39,6 +40,18 @@ export const ensureCurrentMember = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const email = identity.email ?? "";
+
+    // Best-effort: if this person's email domain matches a growth account
+    // (they're at a company we're tracking), a real sign-in is real
+    // adoption evidence. Cooldown-guarded inside logProductSignal so it
+    // doesn't fire on every page load.
+    if (email) {
+      await ctx.runMutation(internal.growth.logProductSignal, {
+        email,
+        kind: "productLogin",
+      });
+    }
 
     const byClerkId = await ctx.db
       .query("teamMembers")
@@ -49,7 +62,6 @@ export const ensureCurrentMember = mutation({
       return byClerkId._id;
     }
 
-    const email = identity.email ?? "";
     if (email) {
       const invited = await ctx.db
         .query("teamMembers")

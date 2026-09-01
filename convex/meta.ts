@@ -71,7 +71,34 @@ async function resolveImageUrl(ctx: ActionCtx, storageId?: Id<"_storage">) {
   return url;
 }
 
+// Public entry point — called directly from the browser. Publishing has to
+// happen as whoever is actually signed in, never as a client-supplied id
+// (that would let anyone publish "as" another workspace member just by
+// passing their id), so this derives userId from the caller's own session
+// and hands off to the internal action that does the real work.
 export const publishFacebookPost = action({
+  args: {
+    content: v.string(),
+    storageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args): Promise<{ postId: Id<"posts">; postUrl: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    return await ctx.runAction(internal.meta.publishFacebookPostAs, {
+      userId: identity.subject,
+      content: args.content,
+      storageId: args.storageId,
+    });
+  },
+});
+
+// Internal — does the actual publish as a specific user. Not reachable from
+// the browser at all (only other Convex functions can call it), so it's
+// safe to trust userId here: the only callers are the public action above
+// (which just derived it from a real session) and the approval-publish
+// pipeline (which stores the submitter's id at submission time, also
+// derived from their session, not from client input).
+export const publishFacebookPostAs = internalAction({
   args: {
     userId: v.string(),
     content: v.string(),
@@ -111,7 +138,25 @@ export const publishFacebookPost = action({
   },
 });
 
+// See publishFacebookPost above for why this is split into a public
+// identity-deriving wrapper and an internal implementation.
 export const publishInstagramPost = action({
+  args: {
+    caption: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args): Promise<{ postId: Id<"posts">; postUrl: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    return await ctx.runAction(internal.meta.publishInstagramPostAs, {
+      userId: identity.subject,
+      caption: args.caption,
+      storageId: args.storageId,
+    });
+  },
+});
+
+export const publishInstagramPostAs = internalAction({
   args: {
     userId: v.string(),
     caption: v.string(),

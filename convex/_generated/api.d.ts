@@ -13,6 +13,7 @@ import type * as approvals from "../approvals.js";
 import type * as audit from "../audit.js";
 import type * as campaigns from "../campaigns.js";
 import type * as comments from "../comments.js";
+import type * as consumerJourney from "../consumerJourney.js";
 import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as followUpTasks from "../followUpTasks.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   audit: typeof audit;
   campaigns: typeof campaigns;
   comments: typeof comments;
+  consumerJourney: typeof consumerJourney;
   crons: typeof crons;
   files: typeof files;
   followUpTasks: typeof followUpTasks;

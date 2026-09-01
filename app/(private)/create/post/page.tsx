@@ -74,9 +74,9 @@ export default function CreatePage() {
         platforms.map(async (platform) => {
           if (platform === "Instagram") {
             if (!storageId) throw new Error(t("instagramImageRequired"));
-            await publishInstagramPost({ userId, caption: content, storageId });
+            await publishInstagramPost({ caption: content, storageId });
           } else if (platform === "Facebook") {
-            await publishFacebookPost({ userId, content, storageId });
+            await publishFacebookPost({ content, storageId });
           } else {
             throw new Error(t("publishFailed", { platform }));
           }

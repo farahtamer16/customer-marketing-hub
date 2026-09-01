@@ -27,6 +27,7 @@ export const signalKinds: SignalKind[] = [
   "demoRequested",
   "trialStarted",
   "postCreated",
+  "productLogin",
   "teamInvited",
   "supportOpened",
   "supportResolved",

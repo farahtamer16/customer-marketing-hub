@@ -214,7 +214,7 @@ export const publishApprovedPost = internalAction({
     for (const channel of post.channels) {
       try {
         if (channel === "facebook") {
-          const result = await ctx.runAction(api.meta.publishFacebookPost, {
+          const result = await ctx.runAction(internal.meta.publishFacebookPostAs, {
             userId: post.authorUserId,
             content: post.content,
             storageId: post.storageId,
@@ -225,7 +225,7 @@ export const publishApprovedPost = internalAction({
             errors.push("instagram: an image is required and none was attached");
             continue;
           }
-          const result = await ctx.runAction(api.meta.publishInstagramPost, {
+          const result = await ctx.runAction(internal.meta.publishInstagramPostAs, {
             userId: post.authorUserId,
             caption: post.content,
             storageId: post.storageId,

@@ -542,6 +542,7 @@
       "demoRequested": "Requested a product demo",
       "trialStarted": "Started a product trial",
       "postCreated": "Created or published a social post",
+      "productLogin": "Signed in to the product",
       "teamInvited": "Invited teammates into the workspace",
       "supportOpened": "Opened a support issue",
       "supportResolved": "Support issue was resolved",
@@ -1072,10 +1073,10 @@
       "consumerTitle": "One person moves through a direct lifecycle",
       "consumerExplanation": "A consumer journey follows one identity from the first website visit through conversion, activation, and retention.",
       "recommendedAction": "Sales action",
-      "recommendedReason": "Northstar Retail has high intent, three engaged buying roles, and a recent demo request.",
-      "reviewAccount": "Review Northstar",
+      "recommendedReason": "High intent, several engaged buying roles, and a recent demo request make this account ready for a coordinated sales push.",
+      "reviewAccount": "Review account",
       "supportAction": "Support action",
-      "supportReason": "Namaa Health is highly adopted, but an active connection issue could delay full activation.",
+      "supportReason": "A highly adopted account with an active support issue that could delay full activation.",
       "openSupportContext": "Open support context",
       "advanceStage": "Advance stage",
       "advanceFailed": "Failed to advance stage",
@@ -1096,12 +1097,13 @@
         "retained": "Retained"
       },
       "consumerHints": {
-        "firstVisit": "Capture source, campaign, and high-intent pages.",
-        "contentEngaged": "Use social, email, and website behavior to personalize the next message.",
-        "signedUp": "Connect the anonymous journey to the known user profile.",
-        "activated": "Guide the user to the first meaningful product outcome.",
-        "retained": "Monitor repeated value, support needs, and churn signals."
-      }
+        "firstVisit": "Anonymous visitors on spiders.ai, tracked by browser id.",
+        "contentEngaged": "Clicked through toward sign in or sign up.",
+        "signedUp": "Created a real account.",
+        "activated": "Published at least one real post.",
+        "retained": "Published three or more real posts."
+      },
+      "consumerNoData": "No tracked visitors yet — this fills in as real traffic hits the public landing page."
     },
     "revenue": {
       "eyebrow": "Revenue intelligence",

@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
- 
+import { internal } from "./_generated/api";
+
 export const recordPublishedPost = mutation({
   args: {
     userId: v.string(),
@@ -27,6 +28,22 @@ export const recordPublishedPost = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Real adoption evidence: if whoever published this is at a company we
+    // track as a growth account (matched by email domain), log it as a
+    // real product-usage signal instead of adoption only moving when
+    // someone remembers to log it by hand.
+    const publisher = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
+      .unique();
+    if (publisher?.email) {
+      await ctx.runMutation(internal.growth.logProductSignal, {
+        email: publisher.email,
+        kind: "postCreated",
+      });
+    }
+
     return id;
   },
 });
@@ -204,6 +221,7 @@ export const markItemPublished = mutation({
     platformPostId: v.optional(v.string()), // 👈 Changed from 'postId' to 'platformPostId'
   },
   handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.postId);
     await ctx.db.patch(args.postId, {
       status: "Published",
       publishedAt: Date.now(),
@@ -211,6 +229,21 @@ export const markItemPublished = mutation({
       postUrl: args.postUrl,
       platformPostId: args.platformPostId, // 👈 Store the platform's post ID
     });
+
+    // A scheduled post going live is just as real a "created a post" event
+    // as a direct publish — same adoption-signal hook as recordPublishedPost.
+    if (post) {
+      const publisher = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", post.userId))
+        .unique();
+      if (publisher?.email) {
+        await ctx.runMutation(internal.growth.logProductSignal, {
+          email: publisher.email,
+          kind: "postCreated",
+        });
+      }
+    }
   },
 });
 export const cancelScheduledItem = mutation({

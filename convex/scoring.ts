@@ -21,6 +21,7 @@ type SignalKind =
   | "demoRequested"
   | "trialStarted"
   | "postCreated"
+  | "productLogin"
   | "teamInvited"
   | "supportOpened"
   | "supportResolved"
@@ -80,6 +81,7 @@ const INTENT_WEIGHT_BY_KIND: Record<SignalKind, number> = {
   campaignClick: 8,
   teamInvited: 5,
   postCreated: 3,
+  productLogin: 2,
   supportResolved: 2,
   supportOpened: -5,
 };

@@ -1,13 +1,29 @@
+"use client";
+
+import { useEffect } from "react";
+import { useMutation } from "convex/react";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import BrandMark from "@/components/hub/BrandMark";
 import SignalMap from "./SignalMap";
 import WorkflowRail from "./WorkflowRail";
 import SessionActions from "./SessionActions";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import { api } from "@/convex/_generated/api";
+import { getVisitorId } from "@/hooks/useVisitorId";
 import { useTranslations } from "next-intl";
 
 export default function LandingExperience({ signedIn }: { signedIn: boolean }) {
   const t = useTranslations("landing");
+  const recordVisit = useMutation(api.consumerJourney.recordVisit);
+
+  useEffect(() => {
+    if (signedIn) return; // already converted — nothing to track
+    recordVisit({ visitorId: getVisitorId() }).catch(() => {});
+    // Only on mount: this fires once per page load, which is the real
+    // "a visitor arrived" event — not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <main className="landing-shell soft-grid min-h-screen overflow-hidden">
       <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-6 sm:px-10 lg:px-16">

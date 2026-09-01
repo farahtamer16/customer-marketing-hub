@@ -222,6 +222,7 @@ export default defineSchema({
           v.literal("demoRequested"),
           v.literal("trialStarted"),
           v.literal("postCreated"),
+          v.literal("productLogin"),
           v.literal("teamInvited"),
           v.literal("supportOpened"),
           v.literal("supportResolved"),
@@ -385,5 +386,23 @@ export default defineSchema({
     target: v.string(),
     occurredAt: v.number(),
   }).index("by_occurredAt", ["occurredAt"]),
+
+  // Anonymous consumer-side funnel tracking for the public landing page
+  // (spiders.ai) — a browser-generated id, not a login, so we can see
+  // first visit -> engagement -> signup before anyone has an account.
+  // "Activated"/"retained" aren't stored here; they're derived at query
+  // time from real published-post counts once a visitor links to a real
+  // Clerk user, same as everything else in this app that's computed
+  // rather than hand-set.
+  consumerVisitors: defineTable({
+    visitorId: v.string(),
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+    engagedAt: v.optional(v.number()),
+    signedUpAt: v.optional(v.number()),
+    clerkUserId: v.optional(v.string()),
+  })
+    .index("by_visitorId", ["visitorId"])
+    .index("by_clerkUserId", ["clerkUserId"]),
 
 });
