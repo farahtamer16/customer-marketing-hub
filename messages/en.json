@@ -60,8 +60,6 @@
     "newSchedule": "New schedule",
     "accounts": "Accounts",
     "connectedChannels": "Connected channels",
-    "growthMyWorkspace": "My workspace",
-    "growthOverview": "Growth overview",
     "home": "Home",
     "contentStudio": "Content studio",
     "contentStudioHint": "Publish and track social content",
@@ -73,6 +71,7 @@
     "calendarHint": "See everything scheduled across channels",
     "commentsHint": "Review and reply to comments, auto-classified by intent",
     "analyticsHint": "Real engagement, reach, and impressions per post",
+    "tasksHint": "Follow-up tasks generated from classified comments",
     "growthAccountsHint": "B2B companies you're selling to, scored by intent",
     "growthLeadsHint": "Individual decision-makers inside each account",
     "growthJourneysHint": "Move accounts through lifecycle stages",
@@ -619,8 +618,6 @@
       "permissionMatrixHint": "A frontend policy proposal showing the access each role should receive.",
       "allowed": "Allowed",
       "notAllowed": "Not allowed",
-      "frontendNotice": "Frontend access preview—not security enforcement",
-      "frontendNoticeDescription": "These screens explain the intended access model. Real protection must be checked by the backend on every protected query, mutation, and API request.",
       "inviteTitle": "Invite a teammate",
       "inviteDescription": "Assign the person a starting workspace role.",
       "name": "Full name",
@@ -635,16 +632,6 @@
         "invited": "Invited",
         "suspended": "Suspended"
       }
-    },
-    "roleDescriptions": {
-      "ownerAdmin": "Controls organization settings, data connections, members, roles, and all growth operations.",
-      "cmo": "Reviews acquisition cost, pipeline, conversion, retention, and lifetime value without operational clutter.",
-      "marketingManager": "Runs campaigns, coordinates journeys, qualifies accounts, and manages approvals and activation programs.",
-      "socialMediaUser": "Manages daily social interactions, creates and schedules posts, tags contacts, and flags high-intent conversations.",
-      "socialMediaManager": "Creates and schedules content, manages comments, and monitors channel-level engagement.",
-      "sales": "Works high-intent accounts, buying groups, demos, pipeline, and recommended commercial actions.",
-      "customerSuccess": "Guides activation, adoption, account health, expansion, and renewal after the sales handoff.",
-      "support": "Resolves customer blockers and surfaces service signals that may affect activation, health, or renewal."
     },
     "roleDashboards": {
       "accessDenied": {
@@ -868,59 +855,6 @@
         "detail": "A channel connection problem may delay activation."
       }
     },
-    "setup": {
-      "back": "Back to my workspace",
-      "eyebrow": "Administrator onboarding",
-      "title": "Configure the growth workspace",
-      "description": "Connect the organization, data, teammates, access rules, and approval policy before operations begin.",
-      "steps": {
-        "organization": "Organization",
-        "data": "Data",
-        "team": "Team",
-        "access": "Access",
-        "approvals": "Approvals"
-      },
-      "organizationTitle": "Create the organization workspace",
-      "organizationDescription": "This becomes the internal home for marketing, sales, social, support, and leadership.",
-      "organizationName": "Organization name",
-      "dataTitle": "Connect customer and campaign signals",
-      "dataDescription": "Choose the sources that will eventually feed account intent, adoption, service, and revenue context.",
-      "teamTitle": "Invite the operating team",
-      "teamDescription": "Internal workspace roles control what your own teammates see and do.",
-      "manageTeam": "Open team management",
-      "accessTitle": "Review least-privilege access",
-      "accessDescription": "Start each teammate with only the capabilities needed for their responsibilities.",
-      "permissionCount": "{count, plural, =1 {1 permission} other {# permissions}}",
-      "approvalTitle": "Configure content approval policy",
-      "approvalDescription": "Route routine work efficiently and reserve executive review for sensitive or strategic content.",
-      "previous": "Previous",
-      "next": "Next",
-      "finish": "Finish setup",
-      "completeTitle": "Workspace setup is ready",
-      "completeDescription": "{organization} now has a proposed operating model for data, roles, and approvals.",
-      "openWorkspace": "Open my workspace",
-      "reviewSetup": "Review setup",
-      "sources": {
-        "facebook": "Facebook",
-        "instagram": "Instagram",
-        "website": "Website",
-        "crm": "CRM",
-        "product": "Product usage",
-        "support": "Support"
-      },
-      "rules": {
-        "socialNeedsManager": "Social posts require marketing-manager approval",
-        "highRiskNeedsCmo": "High-risk campaigns require CMO approval",
-        "managerCanPublish": "Marketing managers can publish routine content",
-        "blockUnapprovedSchedule": "Unapproved posts cannot publish at the scheduled time"
-      },
-      "ruleHints": {
-        "socialNeedsManager": "Social authors submit drafts to the marketing approval queue.",
-        "highRiskNeedsCmo": "Strategic, sensitive, or major-budget content adds a final executive step.",
-        "managerCanPublish": "Routine content can move directly from manager approval to scheduling.",
-        "blockUnapprovedSchedule": "Late approval keeps the post in the queue instead of publishing it automatically."
-      }
-    },
     "approvals": {
       "eyebrow": "Content governance",
       "title": "Approval queue",
@@ -969,9 +903,7 @@
       "notePlaceholder": "Explain the decision or requested revision…",
       "cancel": "Cancel",
       "confirm": "Confirm decision",
-      "resetDemo": "Reset prototype decision",
       "activity": "Approval activity",
-      "demoReviewer": "Demo reviewer",
       "publishFailed": "This post was approved but failed to publish"
     },
     "approvalSteps": {

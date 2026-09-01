@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ApprovalPost } from "@/types/workflow";
-import { PrototypeNotices } from "./TeamPrimitives";
+import { DemoModeBanner } from "./GrowthPrimitives";
 import { ApprovalStatusPill, ChannelPills } from "./WorkflowPrimitives";
 import {
   ApprovalActivity,
@@ -56,7 +56,7 @@ export default function ApprovalReview({ post }: { post: ApprovalPost }) {
         <ArrowLeft className="rtl:rotate-180" size={16} />{" "}
         {t("approvalReview.back")}
       </Link>
-      <PrototypeNotices />
+      <DemoModeBanner />
 
       {post.publishError && (
         <div className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

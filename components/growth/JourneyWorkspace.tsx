@@ -29,9 +29,24 @@ const consumerStages = [
   "retained",
 ] as const;
 
+const EMPTY_ACCOUNTS: GrowthAccount[] = [];
+
 export default function JourneyWorkspace() {
   const t = useTranslations("growth");
   const [mode, setMode] = useState<"b2b" | "consumer">("b2b");
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    EMPTY_ACCOUNTS) as GrowthAccount[];
+  // These two cards recommend a concrete next action, so they link to a
+  // real account that action applies to right now — not a fixed example —
+  // falling back to the account list when nothing currently matches.
+  const demoAccount =
+    growthAccounts
+      .filter((account) => account.nextAction === "bookExecutiveDemo")
+      .sort((a, b) => b.intentScore - a.intentScore)[0] ??
+    [...growthAccounts].sort((a, b) => b.intentScore - a.intentScore)[0];
+  const supportAccount = growthAccounts.find(
+    (account) => account.nextAction === "resolveSupportBlocker",
+  );
 
   return (
     <>
@@ -102,7 +117,7 @@ export default function JourneyWorkspace() {
             {t("journeys.recommendedReason")}
           </p>
           <Link
-            href="/growth/accounts/northstar-retail"
+            href={demoAccount ? `/growth/accounts/${demoAccount.id}` : "/growth/accounts"}
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#173b9a]"
           >
             {t("journeys.reviewAccount")} <ArrowUpRight size={15} />
@@ -123,7 +138,7 @@ export default function JourneyWorkspace() {
             {t("journeys.supportReason")}
           </p>
           <Link
-            href="/growth/accounts/namaa-health"
+            href={supportAccount ? `/growth/accounts/${supportAccount.id}` : "/growth/accounts"}
             className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#2854dc]"
           >
             {t("journeys.openSupportContext")} <ArrowUpRight size={15} />

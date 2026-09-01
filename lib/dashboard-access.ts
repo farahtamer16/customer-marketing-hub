@@ -11,7 +11,8 @@ type DashboardNavLabel =
   | "posts"
   | "calendar"
   | "comments"
-  | "analytics";
+  | "analytics"
+  | "tasks";
 
 // "content" = the social publishing tool (posts, scheduling, comments,
 // analytics). "growth" = the B2B customer growth / CRM hub (accounts,
@@ -34,6 +35,7 @@ export const dashboardNavigation: Record<DashboardRole, NavEntry[]> = {
     { label: "calendar", href: "/schedule", section: "content" },
     { label: "comments", href: "/comments", section: "content" },
     { label: "analytics", href: "/analytics", section: "content" },
+    { label: "tasks", href: "/tasks", section: "content" },
     { label: "growthAccounts", href: "/growth/accounts", section: "growth" },
     { label: "growthLeads", href: "/growth/leads", section: "growth" },
     { label: "growthJourneys", href: "/growth/journeys", section: "growth" },
@@ -55,5 +57,6 @@ export const dashboardNavigation: Record<DashboardRole, NavEntry[]> = {
     { label: "posts", href: "/posts", section: "content" },
     { label: "calendar", href: "/schedule", section: "content" },
     { label: "comments", href: "/comments", section: "content" },
+    { label: "tasks", href: "/tasks", section: "content" },
   ],
 };

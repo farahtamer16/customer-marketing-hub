@@ -9,6 +9,7 @@ import {
   Route,
   ScanSearch,
   ShieldCheck,
+  SquareCheckBig,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
@@ -27,4 +28,5 @@ export const navIcons: Record<string, LucideIcon> = {
   calendar: CalendarDays,
   comments: MessageSquareText,
   analytics: LineChart,
+  tasks: SquareCheckBig,
 };

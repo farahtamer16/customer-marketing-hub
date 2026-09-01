@@ -13,14 +13,9 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { workspacePermissions, workspaceRoles } from "@/lib/workspace-data";
 import type { WorkspaceMember, WorkspaceRole } from "@/types/growth";
-import { MetricCard } from "./GrowthPrimitives";
+import { DemoModeBanner, MetricCard } from "./GrowthPrimitives";
 import InviteMemberDialog from "./InviteMemberDialog";
-import {
-  PrototypeNotices,
-  MemberAvatar,
-  MemberStatusPill,
-  WorkspaceRolePill,
-} from "./TeamPrimitives";
+import { MemberAvatar, MemberStatusPill, WorkspaceRolePill } from "./TeamPrimitives";
 
 const EMPTY_MEMBERS: WorkspaceMember[] = [];
 
@@ -173,7 +168,7 @@ export default function TeamAccessWorkspace() {
           </button>
         }
       />
-      <PrototypeNotices />
+      <DemoModeBanner />
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard

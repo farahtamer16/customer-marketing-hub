@@ -1,9 +1,8 @@
 "use client";
 
-import { Check, Clock3, ShieldCheck, UserRoundX } from "lucide-react";
+import { Check, Clock3, UserRoundX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { WorkspaceMember, WorkspaceRole } from "@/types/growth";
-import { DemoModeBanner } from "./GrowthPrimitives";
 
 const roleTones: Record<WorkspaceRole, string> = {
   ownerAdmin: "bg-indigo-100 text-indigo-700",
@@ -58,26 +57,3 @@ export function MemberStatusPill({
   );
 }
 
-export function FrontendAccessNotice() {
-  const t = useTranslations("growth.team");
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-amber-900">
-      <ShieldCheck className="mt-0.5 shrink-0" size={17} />
-      <div>
-        <p className="text-sm font-semibold">{t("frontendNotice")}</p>
-        <p className="mt-1 text-xs leading-5 text-amber-700">
-          {t("frontendNoticeDescription")}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export function PrototypeNotices() {
-  return (
-    <>
-      <DemoModeBanner />
-      <FrontendAccessNotice />
-    </>
-  );
-}
