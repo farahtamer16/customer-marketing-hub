@@ -11,7 +11,7 @@ import {
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { CampaignImpact, GrowthAccount } from "@/types/growth";
-import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
+import { DashboardCard, RoleDashboardShell, WorkspaceDirectory } from "./DashboardPrimitives";
 import { AccountAvatar, ScoreMeter, StagePill } from "./GrowthPrimitives";
 
 export default function CMODashboard() {
@@ -54,6 +54,8 @@ export default function CMODashboard() {
 
   return (
     <RoleDashboardShell role="cmo">
+      <WorkspaceDirectory role="cmo" />
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <DashboardCard
           icon={Gauge}

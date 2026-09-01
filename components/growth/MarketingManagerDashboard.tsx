@@ -11,7 +11,7 @@ import TableToolbar from "@/components/ui/TableToolbar";
 import { api } from "@/convex/_generated/api";
 import { journeyStages } from "@/lib/growth-data";
 import type { CampaignImpact, GrowthAccount, GrowthLead } from "@/types/growth";
-import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
+import { DashboardCard, RoleDashboardShell, WorkspaceDirectory } from "./DashboardPrimitives";
 import { ScoreMeter, StagePill } from "./GrowthPrimitives";
 
 const EMPTY_ACCOUNTS: GrowthAccount[] = [];
@@ -105,6 +105,8 @@ export default function MarketingManagerDashboard() {
 
   return (
     <RoleDashboardShell role="marketing_manager">
+      <WorkspaceDirectory role="marketing_manager" />
+
       <section className="grid gap-4 md:grid-cols-3">
         <DashboardCard
           icon={UserCheck}

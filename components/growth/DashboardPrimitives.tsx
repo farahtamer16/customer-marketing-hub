@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowUpRight, LockKeyhole, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
+import { dashboardNavigation } from "@/lib/dashboard-access";
+import { navIcons } from "@/lib/nav-icons";
 import type { DashboardRole } from "@/types/dashboard";
 
 export function RoleDashboardShell({
@@ -77,6 +79,33 @@ export function DashboardCard({
     </Link>
   ) : (
     <article className={className}>{content}</article>
+  );
+}
+
+// A directory grid of every page a role can reach, grouped by product area
+// (content studio vs growth hub) — surfaces the site map directly instead
+// of requiring someone to already know it lives in the sidebar.
+export function WorkspaceDirectory({ role }: { role: DashboardRole }) {
+  const t = useTranslations("sidebar");
+  const items = dashboardNavigation[role];
+  if (items.length === 0) return null;
+
+  return (
+    <section className="mb-6">
+      <h2 className="font-semibold text-[#071e55]">{t("explore")}</h2>
+      <p className="mt-1 text-xs text-slate-500">{t("exploreHint")}</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map(({ label, href }) => (
+          <DashboardCard
+            key={href}
+            icon={navIcons[label]}
+            title={t(label)}
+            description={t(`${label}Hint`)}
+            href={href}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

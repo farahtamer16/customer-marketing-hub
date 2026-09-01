@@ -5,7 +5,7 @@ import { ScrollText, ShieldCheck, UsersRound } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { workspaceRoles } from "@/lib/workspace-data";
-import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
+import { DashboardCard, RoleDashboardShell, WorkspaceDirectory } from "./DashboardPrimitives";
 import { WorkspaceRolePill } from "./TeamPrimitives";
 
 export default function AdminDashboard() {
@@ -17,6 +17,8 @@ export default function AdminDashboard() {
 
   return (
     <RoleDashboardShell role="admin">
+      <WorkspaceDirectory role="admin" />
+
       <section className="grid gap-4 md:grid-cols-2">
         <DashboardCard
           icon={UsersRound}
