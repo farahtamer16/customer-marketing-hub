@@ -1133,6 +1133,9 @@
       "newCampaign": "New campaign",
       "newCampaignTitle": "Add a campaign",
       "newCampaignDescription": "Track spend and pipeline impact for a new acquisition or lifecycle program.",
+      "editCampaignTitle": "Edit campaign",
+      "editCampaignDescription": "Update spend or change which real accounts this campaign is linked to.",
+      "editCampaign": "Edit campaign",
       "name": "Campaign name",
       "channel": "Channel",
       "spend": "Spend ($)",
@@ -1141,7 +1144,9 @@
       "noAccountsToLink": "No accounts yet — create one first to link it to a campaign.",
       "cancel": "Cancel",
       "create": "Add campaign",
-      "createFailed": "Failed to add campaign"
+      "createFailed": "Failed to add campaign",
+      "saveChanges": "Save changes",
+      "updateFailed": "Failed to update campaign"
     }
   }
 }

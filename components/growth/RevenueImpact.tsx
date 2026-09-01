@@ -8,6 +8,7 @@ import {
   ChartNoAxesCombined,
   CircleDollarSign,
   HeartHandshake,
+  Pencil,
   Plus,
   Target,
   TrendingDown,
@@ -41,6 +42,7 @@ export default function RevenueImpact() {
   const growthAccounts = (useQuery(api.growth.listAccounts) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const [newCampaignOpen, setNewCampaignOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<CampaignImpact | null>(null);
   const totals = campaignImpact.reduce(
     (result, campaign) => ({
       spend: result.spend + campaign.spend,
@@ -192,13 +194,23 @@ export default function RevenueImpact() {
                       })}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-[#173b9a]">
-                    {format.number(campaign.pipeline, {
-                      style: "currency",
-                      currency: "USD",
-                      notation: "compact",
-                    })}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm font-bold text-[#173b9a]">
+                      {format.number(campaign.pipeline, {
+                        style: "currency",
+                        currency: "USD",
+                        notation: "compact",
+                      })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCampaign(campaign)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-[#173b9a]"
+                      aria-label={t("revenue.editCampaign")}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
@@ -288,6 +300,12 @@ export default function RevenueImpact() {
         </div>
       </section>
       <NewCampaignDialog open={newCampaignOpen} onClose={() => setNewCampaignOpen(false)} />
+      <NewCampaignDialog
+        key={editingCampaign?.id ?? "no-campaign"}
+        open={editingCampaign !== null}
+        onClose={() => setEditingCampaign(null)}
+        campaign={editingCampaign ?? undefined}
+      />
     </>
   );
 }

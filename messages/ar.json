@@ -1133,6 +1133,9 @@
       "newCampaign": "حملة جديدة",
       "newCampaignTitle": "إضافة حملة",
       "newCampaignDescription": "تتبّع الإنفاق وأثر قيمة الفرص لبرنامج استحواذ أو دورة حياة جديد.",
+      "editCampaignTitle": "تعديل الحملة",
+      "editCampaignDescription": "حدّث الإنفاق أو غيّر الحسابات الحقيقية المرتبطة بهذه الحملة.",
+      "editCampaign": "تعديل الحملة",
       "name": "اسم الحملة",
       "channel": "القناة",
       "spend": "الإنفاق ($)",
@@ -1141,7 +1144,9 @@
       "noAccountsToLink": "لا توجد حسابات بعد — أنشئ حسابًا أولًا لربطه بحملة.",
       "cancel": "إلغاء",
       "create": "إضافة الحملة",
-      "createFailed": "تعذّرت إضافة الحملة"
+      "createFailed": "تعذّرت إضافة الحملة",
+      "saveChanges": "حفظ التغييرات",
+      "updateFailed": "تعذّر تحديث الحملة"
     }
   }
 }

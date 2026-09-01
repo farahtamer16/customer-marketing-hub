@@ -89,6 +89,8 @@ export const createCampaign = mutation({
 export const updateCampaign = mutation({
   args: {
     campaignId: v.id("campaigns"),
+    name: v.optional(v.string()),
+    channel: v.optional(channel),
     spend: v.optional(v.number()),
     accountIds: v.optional(v.array(v.id("growthAccounts"))),
   },

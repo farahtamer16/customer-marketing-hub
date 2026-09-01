@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { signalSources } from "@/lib/growth-data";
-import type { GrowthAccount, SignalSource } from "@/types/growth";
+import type { CampaignImpact, GrowthAccount, SignalSource } from "@/types/growth";
 import { StagePill } from "./GrowthPrimitives";
 
 const EMPTY_ACCOUNTS: GrowthAccount[] = [];
@@ -16,18 +16,24 @@ const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 export default function NewCampaignDialog({
   open,
   onClose,
+  campaign,
 }: {
   open: boolean;
   onClose: () => void;
+  // Present = editing this campaign (relink accounts, tweak spend/name).
+  // Absent = creating a new one.
+  campaign?: CampaignImpact;
 }) {
   const t = useTranslations("growth");
+  const editMode = Boolean(campaign);
   const createCampaign = useMutation(api.campaigns.createCampaign);
+  const updateCampaign = useMutation(api.campaigns.updateCampaign);
   const growthAccounts = (useQuery(api.growth.listAccounts) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
-  const [name, setName] = useState("");
-  const [channel, setChannel] = useState<SignalSource>("social");
-  const [spend, setSpend] = useState("");
-  const [accountIds, setAccountIds] = useState<string[]>([]);
+  const [name, setName] = useState(campaign?.name ?? "");
+  const [channel, setChannel] = useState<SignalSource>(campaign?.channel ?? "social");
+  const [spend, setSpend] = useState(campaign ? String(campaign.spend) : "");
+  const [accountIds, setAccountIds] = useState<string[]>(campaign?.accountIds ?? []);
   const [submitting, setSubmitting] = useState(false);
   const valid = name.trim().length >= 2;
 
@@ -42,13 +48,6 @@ export default function NewCampaignDialog({
 
   if (!open) return null;
 
-  const reset = () => {
-    setName("");
-    setChannel("social");
-    setSpend("");
-    setAccountIds([]);
-  };
-
   const toggleAccount = (id: string) => {
     setAccountIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
@@ -60,18 +59,33 @@ export default function NewCampaignDialog({
     if (!valid || submitting) return;
     setSubmitting(true);
     try {
-      await createCampaign({
-        name: name.trim(),
-        channel,
-        spend: Number(spend) || 0,
-        accountIds: accountIds.length
-          ? (accountIds as Id<"growthAccounts">[])
-          : undefined,
-      });
-      reset();
+      if (editMode && campaign) {
+        await updateCampaign({
+          campaignId: campaign.id as Id<"campaigns">,
+          name: name.trim(),
+          channel,
+          spend: Number(spend) || 0,
+          accountIds: accountIds as Id<"growthAccounts">[],
+        });
+      } else {
+        await createCampaign({
+          name: name.trim(),
+          channel,
+          spend: Number(spend) || 0,
+          accountIds: accountIds.length
+            ? (accountIds as Id<"growthAccounts">[])
+            : undefined,
+        });
+      }
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("revenue.createFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : editMode
+            ? t("revenue.updateFailed")
+            : t("revenue.createFailed"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -98,10 +112,12 @@ export default function NewCampaignDialog({
             </span>
             <div>
               <h2 id="new-campaign-title" className="font-semibold text-[#071e55]">
-                {t("revenue.newCampaignTitle")}
+                {editMode ? t("revenue.editCampaignTitle") : t("revenue.newCampaignTitle")}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                {t("revenue.newCampaignDescription")}
+                {editMode
+                  ? t("revenue.editCampaignDescription")
+                  : t("revenue.newCampaignDescription")}
               </p>
             </div>
           </div>
@@ -197,7 +213,7 @@ export default function NewCampaignDialog({
               disabled={!valid || submitting}
               className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {t("revenue.create")}
+              {editMode ? t("revenue.saveChanges") : t("revenue.create")}
             </button>
           </div>
         </form>
