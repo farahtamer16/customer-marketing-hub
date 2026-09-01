@@ -7,6 +7,7 @@ import {
   BadgeDollarSign,
   ChartNoAxesCombined,
   CircleDollarSign,
+  Eye,
   HeartHandshake,
   Pencil,
   Plus,
@@ -193,6 +194,30 @@ export default function RevenueImpact() {
                         retained: campaign.retained,
                       })}
                     </p>
+                    {campaign.postIds && campaign.postIds.length > 0 && (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-[#3156dc]">
+                        <Eye size={12} className="flex-none" />
+                        {campaign.postsWithData ? (
+                          t("revenue.socialPerformance", {
+                            reach: format.number(campaign.socialReach ?? 0, {
+                              notation: "compact",
+                            }),
+                            impressions: format.number(
+                              campaign.socialImpressions ?? 0,
+                              { notation: "compact" },
+                            ),
+                            engagement: format.number(
+                              campaign.socialEngagement ?? 0,
+                              { notation: "compact" },
+                            ),
+                          })
+                        ) : (
+                          <span className="text-slate-400">
+                            {t("revenue.socialPerformanceNoData")}
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <p className="text-sm font-bold text-[#173b9a]">

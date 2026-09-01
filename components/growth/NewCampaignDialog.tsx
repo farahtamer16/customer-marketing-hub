@@ -6,12 +6,13 @@ import { Megaphone, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { signalSources } from "@/lib/growth-data";
 import type { CampaignImpact, GrowthAccount, SignalSource } from "@/types/growth";
 import { StagePill } from "./GrowthPrimitives";
 
 const EMPTY_ACCOUNTS: GrowthAccount[] = [];
+const EMPTY_POSTS: Doc<"posts">[] = [];
 
 export default function NewCampaignDialog({
   open,
@@ -30,10 +31,12 @@ export default function NewCampaignDialog({
   const updateCampaign = useMutation(api.campaigns.updateCampaign);
   const growthAccounts = (useQuery(api.growth.listAccounts) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
+  const publishedPosts = useQuery(api.posts.listPublished) ?? EMPTY_POSTS;
   const [name, setName] = useState(campaign?.name ?? "");
   const [channel, setChannel] = useState<SignalSource>(campaign?.channel ?? "social");
   const [spend, setSpend] = useState(campaign ? String(campaign.spend) : "");
   const [accountIds, setAccountIds] = useState<string[]>(campaign?.accountIds ?? []);
+  const [postIds, setPostIds] = useState<string[]>(campaign?.postIds ?? []);
   const [submitting, setSubmitting] = useState(false);
   const valid = name.trim().length >= 2;
 
@@ -54,6 +57,12 @@ export default function NewCampaignDialog({
     );
   };
 
+  const togglePost = (id: string) => {
+    setPostIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!valid || submitting) return;
@@ -66,6 +75,7 @@ export default function NewCampaignDialog({
           channel,
           spend: Number(spend) || 0,
           accountIds: accountIds as Id<"growthAccounts">[],
+          postIds: postIds as Id<"posts">[],
         });
       } else {
         await createCampaign({
@@ -75,6 +85,7 @@ export default function NewCampaignDialog({
           accountIds: accountIds.length
             ? (accountIds as Id<"growthAccounts">[])
             : undefined,
+          postIds: postIds.length ? (postIds as Id<"posts">[]) : undefined,
         });
       }
       onClose();
@@ -194,6 +205,40 @@ export default function NewCampaignDialog({
                       <span className="font-medium text-slate-700">{account.name}</span>
                     </span>
                     <StagePill stage={account.stage} />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-slate-700">
+              {t("revenue.linkPosts")}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              {t("revenue.linkPostsHint")}
+            </p>
+            {publishedPosts.length === 0 ? (
+              <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                {t("revenue.noPostsToLink")}
+              </p>
+            ) : (
+              <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                {publishedPosts.map((post) => (
+                  <label
+                    key={post._id}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm hover:bg-slate-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={postIds.includes(post._id)}
+                      onChange={() => togglePost(post._id)}
+                      className="h-4 w-4 flex-none accent-[#3156dc]"
+                    />
+                    <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+                      {post.content || t("revenue.untitledPost")}
+                    </span>
+                    <span className="flex-none text-xs text-slate-400">{post.platform}</span>
                   </label>
                 ))}
               </div>

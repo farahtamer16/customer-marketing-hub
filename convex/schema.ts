@@ -274,6 +274,10 @@ export default defineSchema({
     // 0 and computed at query time from accountIds' real account data
     // whenever accounts are actually linked (see campaigns.listCampaigns).
     accountIds: v.optional(v.array(v.id("growthAccounts"))),
+    // Real posts this campaign covers — reach/impressions/engagement are
+    // computed at query time from these posts' actual analytics, same
+    // "link real records instead of typing a number" pattern as accountIds.
+    postIds: v.optional(v.array(v.id("posts"))),
     accounts: v.number(),
     opportunities: v.number(),
     pipeline: v.number(),

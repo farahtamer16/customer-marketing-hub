@@ -140,6 +140,19 @@ export const getPostsForUser = query({
       .collect();
   },
 });
+
+// Workspace-wide (not scoped to one user) — for picking which real posts a
+// campaign should roll up analytics from. A campaign can span content
+// published by different teammates, so this can't be the per-user query.
+export const listPublished = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("posts")
+      .withIndex("by_status", (q) => q.eq("status", "Published"))
+      .order("desc")
+      .collect();
+  },
+});
  
 
 export const getScheduledItems = query({

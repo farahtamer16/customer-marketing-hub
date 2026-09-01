@@ -98,6 +98,11 @@ export interface CampaignImpact {
   customers: number;
   retained: number;
   ltv: number;
+  postIds?: string[];
+  socialReach?: number;
+  socialImpressions?: number;
+  socialEngagement?: number;
+  postsWithData?: number;
 }
 
 export type WorkspaceRole =
