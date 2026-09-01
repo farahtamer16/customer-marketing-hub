@@ -64,6 +64,35 @@ async function waitForInstagramContainerReady(
   );
 }
 
+// Meta has been consistently returning "(#4) Application request limit
+// reached" on the media_publish call itself while the post still actually
+// goes out on Instagram every time — not the intermittent behavior real
+// throttling would produce. Rather than trust that response, check ground
+// truth: look at the account's most recent media for something matching
+// what was just attempted, published in roughly the last few minutes.
+async function findJustPublishedInstagramMedia(
+  igUserId: string,
+  caption: string,
+  accessToken: string,
+) {
+  const recent = await graphGet(`/${igUserId}/media`, {
+    fields: "id,timestamp,caption,permalink",
+    limit: "5",
+    access_token: accessToken,
+  });
+  const items: Array<{
+    id: string;
+    timestamp: string;
+    caption?: string;
+    permalink?: string;
+  }> = recent.data ?? [];
+  const recentCutoff = Date.now() - 5 * 60 * 1000;
+  return items.find(
+    (item) =>
+      item.caption === caption && new Date(item.timestamp).getTime() > recentCutoff,
+  );
+}
+
 async function resolveImageUrl(ctx: ActionCtx, storageId?: Id<"_storage">) {
   if (!storageId) return undefined;
   const url = await ctx.storage.getUrl(storageId);
@@ -178,21 +207,36 @@ export const publishInstagramPostAs = internalAction({
       access_token: credentials.accessToken,
     });
     await waitForInstagramContainerReady(created.id, credentials.accessToken);
-    const published = await graphFetch(`/${credentials.platformAccountId}/media_publish`, {
-      creation_id: created.id,
-      access_token: credentials.accessToken,
-    });
 
-    const platformPostId: string = published.id;
+    let platformPostId: string;
     let postUrl = `https://www.instagram.com/`;
     try {
-      const permalink = await graphGet(`/${platformPostId}`, {
-        fields: "permalink",
+      const published = await graphFetch(`/${credentials.platformAccountId}/media_publish`, {
+        creation_id: created.id,
         access_token: credentials.accessToken,
       });
-      if (permalink.permalink) postUrl = permalink.permalink;
-    } catch {
-      // permalink lookup is best-effort
+      platformPostId = published.id;
+    } catch (publishError) {
+      const reconciled = await findJustPublishedInstagramMedia(
+        credentials.platformAccountId,
+        args.caption,
+        credentials.accessToken,
+      ).catch(() => undefined);
+      if (!reconciled) throw publishError;
+      platformPostId = reconciled.id;
+      if (reconciled.permalink) postUrl = reconciled.permalink;
+    }
+
+    if (postUrl === `https://www.instagram.com/`) {
+      try {
+        const permalink = await graphGet(`/${platformPostId}`, {
+          fields: "permalink",
+          access_token: credentials.accessToken,
+        });
+        if (permalink.permalink) postUrl = permalink.permalink;
+      } catch {
+        // permalink lookup is best-effort
+      }
     }
 
     const postId: Id<"posts"> = await ctx.runMutation(api.posts.recordPublishedPost, {
@@ -233,12 +277,23 @@ export const publishScheduledPost = action({
           access_token: credentials.accessToken,
         });
         await waitForInstagramContainerReady(created.id, credentials.accessToken);
-        const published = await graphFetch(`/${credentials.platformAccountId}/media_publish`, {
-          creation_id: created.id,
-          access_token: credentials.accessToken,
-        });
-        platformPostId = published.id;
-        postUrl = `https://www.instagram.com/p/${platformPostId}/`;
+        try {
+          const published = await graphFetch(`/${credentials.platformAccountId}/media_publish`, {
+            creation_id: created.id,
+            access_token: credentials.accessToken,
+          });
+          platformPostId = published.id;
+          postUrl = `https://www.instagram.com/p/${platformPostId}/`;
+        } catch (publishError) {
+          const reconciled = await findJustPublishedInstagramMedia(
+            credentials.platformAccountId,
+            post.content,
+            credentials.accessToken,
+          ).catch(() => undefined);
+          if (!reconciled) throw publishError;
+          platformPostId = reconciled.id;
+          postUrl = reconciled.permalink ?? `https://www.instagram.com/p/${platformPostId}/`;
+        }
       } else {
         const result = post.mediaUrl
           ? await graphFetch(`/${credentials.platformAccountId}/photos`, {
