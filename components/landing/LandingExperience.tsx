@@ -7,6 +7,7 @@ import BrandMark from "@/components/hub/BrandMark";
 import SignalMap from "./SignalMap";
 import WorkflowRail from "./WorkflowRail";
 import SessionActions from "./SessionActions";
+import LeadCaptureForm from "./LeadCaptureForm";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import { api } from "@/convex/_generated/api";
 import { getVisitorId } from "@/hooks/useVisitorId";
@@ -64,6 +65,7 @@ export default function LandingExperience({ signedIn }: { signedIn: boolean }) {
               {t("leadFlow")}
             </span>
           </div>
+          {!signedIn && <LeadCaptureForm />}
         </div>
 
         <div className="relative z-10 lg:scale-[1.03]">

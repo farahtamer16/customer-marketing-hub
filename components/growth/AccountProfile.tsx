@@ -11,6 +11,7 @@ import {
   Lightbulb,
   Mail,
   UsersRound,
+  Wand2,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { GrowthAccount } from "@/types/growth";
@@ -25,6 +26,7 @@ import {
   StagePill,
 } from "./GrowthPrimitives";
 import LogSignalDialog from "./LogSignalDialog";
+import PersonalizeOutreachDialog from "./PersonalizeOutreachDialog";
 
 export default function AccountProfile({
   account,
@@ -34,6 +36,7 @@ export default function AccountProfile({
   const t = useTranslations("growth");
   const format = useFormatter();
   const [logSignalOpen, setLogSignalOpen] = useState(false);
+  const [outreachOpen, setOutreachOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -221,13 +224,22 @@ export default function AccountProfile({
             <p className="mt-3 text-sm leading-6 text-blue-100">
               {t(`actionReasons.${account.nextAction}`)}
             </p>
-            <button
-              type="button"
-              onClick={() => setLogSignalOpen(true)}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#173b9a]"
-            >
-              {t("accountDetail.logSignal")} <ArrowUpRight size={15} />
-            </button>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setLogSignalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#173b9a]"
+              >
+                {t("accountDetail.logSignal")} <ArrowUpRight size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setOutreachOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/40 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20"
+              >
+                <Wand2 size={15} /> {t("outreach.openButton")}
+              </button>
+            </div>
           </article>
 
           <article className="glass-card rounded-3xl p-6">
@@ -278,6 +290,12 @@ export default function AccountProfile({
         open={logSignalOpen}
         onClose={() => setLogSignalOpen(false)}
         accountId={account.id}
+      />
+      <PersonalizeOutreachDialog
+        key={account.id}
+        open={outreachOpen}
+        onClose={() => setOutreachOpen(false)}
+        account={account}
       />
     </div>
   );

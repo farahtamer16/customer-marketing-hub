@@ -411,6 +411,11 @@ export default defineSchema({
     engagedAt: v.optional(v.number()),
     signedUpAt: v.optional(v.number()),
     clerkUserId: v.optional(v.string()),
+    // Real email opt-in captured before (or instead of) a full signup — see
+    // consumerJourney.captureLead. Optional because most visitors never
+    // opt in; first capture wins, it's never overwritten.
+    email: v.optional(v.string()),
+    emailCapturedAt: v.optional(v.number()),
   })
     .index("by_visitorId", ["visitorId"])
     .index("by_clerkUserId", ["clerkUserId"]),

@@ -154,7 +154,15 @@
     "demoPerformance": "Demo performance",
     "followUpLabel": "FOLLOW-UP",
     "taskCreated": "Task created",
-    "contactCustomer": "Contact customer"
+    "contactCustomer": "Contact customer",
+    "leadCapture": {
+      "title": "Not ready to sign up? Get product updates by email.",
+      "placeholder": "you@company.com",
+      "submit": "Notify me",
+      "submitting": "Submitting…",
+      "success": "You're on the list — thanks!",
+      "failed": "Couldn't save that email"
+    }
   },
   "dashboard": {
     "eyebrow": "Command center",
@@ -1028,6 +1036,23 @@
       "submit": "Log signal",
       "failed": "Failed to log signal"
     },
+    "outreach": {
+      "openButton": "Personalize outreach",
+      "title": "Personalized outreach",
+      "description": "Drafted for {name} from their real stage, scores, and activity — nothing is sent automatically.",
+      "close": "Close",
+      "intro": "Generate a draft grounded in this account's actual data.",
+      "generate": "Generate draft",
+      "generating": "Generating…",
+      "regenerate": "Regenerate",
+      "subjectLabel": "Subject",
+      "bodyLabel": "Email body",
+      "disclaimer": "This is a draft only — copy it into your own email client to send.",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Couldn't copy to clipboard",
+      "failed": "Failed to generate content"
+    },
     "leads": {
       "eyebrow": "People intelligence",
       "title": "Leads and decision-makers",
@@ -1104,7 +1129,11 @@
         "activated": "Published at least one real post.",
         "retained": "Published three or more real posts."
       },
-      "consumerNoData": "No tracked visitors yet — this fills in as real traffic hits the public landing page."
+      "consumerNoData": "No tracked visitors yet — this fills in as real traffic hits the public landing page.",
+      "capturedLeads": "Email opt-ins",
+      "capturedLeadsHint": "Real emails captured from the landing page opt-in, before or without a full signup.",
+      "noCapturedLeads": "No email opt-ins yet.",
+      "leadSignedUp": "Signed up"
     },
     "revenue": {
       "eyebrow": "Revenue intelligence",

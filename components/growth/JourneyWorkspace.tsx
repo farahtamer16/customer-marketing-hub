@@ -8,11 +8,12 @@ import {
   ArrowUpRight,
   Building2,
   Headphones,
+  Mail,
   Route,
   Sparkles,
   UserRound,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
@@ -235,7 +236,9 @@ function B2BJourney() {
 
 function ConsumerJourney() {
   const t = useTranslations("growth");
+  const format = useFormatter();
   const funnel = useQuery(api.consumerJourney.listFunnel);
+  const capturedLeads = useQuery(api.consumerJourney.listCapturedLeads);
   const totalVisitors = funnel
     ? Object.values(funnel).reduce((sum: number, count: number) => sum + count, 0)
     : 0;
@@ -266,6 +269,46 @@ function ConsumerJourney() {
             </p>
           </article>
         ))}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-slate-100 bg-white/60 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[#071e55]">
+              {t("journeys.capturedLeads")}
+            </h3>
+            <p className="mt-1 text-xs text-slate-500">
+              {t("journeys.capturedLeadsHint")}
+            </p>
+          </div>
+          <Mail size={16} className="text-slate-400" />
+        </div>
+        {capturedLeads !== undefined && capturedLeads.length === 0 ? (
+          <p className="mt-4 text-xs text-slate-400">
+            {t("journeys.noCapturedLeads")}
+          </p>
+        ) : (
+          <div className="mt-4 space-y-2">
+            {(capturedLeads ?? []).slice(0, 8).map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-slate-50/80 px-4 py-2.5 text-xs"
+              >
+                <span className="truncate font-medium text-slate-700">
+                  {lead.email}
+                </span>
+                <span className="flex shrink-0 items-center gap-2 text-slate-400">
+                  {lead.signedUp && (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">
+                      {t("journeys.leadSignedUp")}
+                    </span>
+                  )}
+                  {format.dateTime(lead.capturedAt, { dateStyle: "medium" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -85,6 +85,60 @@ export const linkSignup = mutation({
   },
 });
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Real email opt-in for visitors who aren't ready for a full signup yet —
+// a lightweight lead magnet on the public landing page. First capture wins:
+// once a visitor has opted in, resubmitting (or re-visiting) doesn't
+// overwrite it, so this always reflects the actual first opt-in.
+export const captureLead = mutation({
+  args: { visitorId: v.string(), email: v.string() },
+  handler: async (ctx, args) => {
+    const email = args.email.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(email)) {
+      throw new Error("Enter a valid email address");
+    }
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("consumerVisitors")
+      .withIndex("by_visitorId", (q) => q.eq("visitorId", args.visitorId))
+      .unique();
+    if (existing) {
+      if (existing.email) return;
+      await ctx.db.patch(existing._id, {
+        email,
+        emailCapturedAt: now,
+        lastSeenAt: now,
+      });
+      return;
+    }
+    await ctx.db.insert("consumerVisitors", {
+      visitorId: args.visitorId,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      email,
+      emailCapturedAt: now,
+    });
+  },
+});
+
+// The real, actionable output of the opt-in above — an actual email list
+// the team can see and follow up with, not just a funnel count.
+export const listCapturedLeads = query({
+  handler: async (ctx) => {
+    const visitors = await ctx.db.query("consumerVisitors").collect();
+    return visitors
+      .filter((visitor) => visitor.email && visitor.emailCapturedAt)
+      .sort((a, b) => (b.emailCapturedAt ?? 0) - (a.emailCapturedAt ?? 0))
+      .map((visitor) => ({
+        id: visitor._id,
+        email: visitor.email as string,
+        capturedAt: visitor.emailCapturedAt as number,
+        signedUp: Boolean(visitor.signedUpAt),
+      }));
+  },
+});
+
 // Each visitor is bucketed into the furthest stage they've genuinely
 // reached — activation and retention aren't stored flags, they're read
 // straight off real published-post counts so they can't drift out of sync
