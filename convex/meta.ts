@@ -43,9 +43,13 @@ async function waitForInstagramContainerReady(
   containerId: string,
   accessToken: string,
 ) {
-  const maxAttempts = 10;
+  // Wait before checking, not after — a container is essentially never
+  // ready on the very first check, so checking immediately just burns an
+  // API call that (almost) always comes back "not ready yet."
+  const maxAttempts = 5;
   const delayMs = 2000;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
     const status = await graphGet(`/${containerId}`, {
       fields: "status_code",
       access_token: accessToken,
@@ -54,7 +58,6 @@ async function waitForInstagramContainerReady(
     if (status.status_code === "ERROR") {
       throw new Error("Instagram failed to process the uploaded image.");
     }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
   throw new Error(
     "Instagram is still processing the image — try publishing again in a moment.",
