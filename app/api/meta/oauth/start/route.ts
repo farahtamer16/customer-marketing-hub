@@ -5,6 +5,10 @@ import { randomBytes } from "crypto";
 const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
+  // Separate from pages_read_engagement: that one only covers reading
+  // like/comment counts. Posting, replying to, or otherwise managing
+  // comments on a Page's own posts requires this one.
+  "pages_manage_engagement",
   "pages_manage_posts",
   "pages_manage_metadata",
   "read_insights",
