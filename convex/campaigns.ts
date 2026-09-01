@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requirePermission } from "./authz";
 
 const channel = v.union(
   v.literal("website"),
@@ -31,6 +32,7 @@ export const createCampaign = mutation({
     ltv: v.number(),
   },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageCampaigns");
     return await ctx.db.insert("campaigns", {
       ...args,
       createdAt: Date.now(),
@@ -51,6 +53,7 @@ export const updateCampaign = mutation({
     ltv: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageCampaigns");
     const { campaignId, ...patch } = args;
     await ctx.db.patch(campaignId, { ...patch, updatedAt: Date.now() });
   },
@@ -59,6 +62,7 @@ export const updateCampaign = mutation({
 export const deleteCampaign = mutation({
   args: { campaignId: v.id("campaigns") },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageCampaigns");
     await ctx.db.delete(args.campaignId);
   },
 });

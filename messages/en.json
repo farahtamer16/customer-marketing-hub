@@ -482,7 +482,8 @@
       "down": "↓ {value}%",
       "up": "+{value}%",
       "faster": "{value} days faster",
-      "days": "{value} days"
+      "days": "{value} days",
+      "noDataYet": "Not enough data yet"
     },
     "stages": {
       "discover": "Discover",
@@ -1051,8 +1052,20 @@
       "viewSocial": "View social posts",
       "nextBestAction": "Recommended next action",
       "createAction": "Create growth action",
+      "logSignal": "Log a signal",
       "buyingGroup": "Buying group",
       "accountVsPeople": "The company is the account; these people influence or use the product."
+    },
+    "logSignal": {
+      "title": "Log a signal",
+      "description": "Record real activity for this account — intent, engagement, and adoption scores recompute from it automatically.",
+      "source": "Source",
+      "kind": "Signal",
+      "detail": "Detail (optional)",
+      "detailPlaceholder": "e.g. Asked about SSO on the security webinar",
+      "cancel": "Cancel",
+      "submit": "Log signal",
+      "failed": "Failed to log signal"
     },
     "leads": {
       "eyebrow": "People intelligence",

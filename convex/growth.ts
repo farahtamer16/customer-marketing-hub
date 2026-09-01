@@ -1,6 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
+import { requirePermission } from "./authz";
+import { computeAccountScores } from "./scoring";
 
 function toAccount(doc: Doc<"growthAccounts">) {
   return {
@@ -21,6 +23,7 @@ function toAccount(doc: Doc<"growthAccounts">) {
     nextAction: doc.nextAction,
     members: doc.members,
     signals: doc.signals,
+    stageHistory: doc.stageHistory ?? [],
   };
 }
 
@@ -132,21 +135,30 @@ export const createAccount = mutation({
     ltv: v.number(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("growthAccounts", {
-      ...args,
-      intentScore: 50,
-      engagementScore: 50,
-      adoptionScore: 0,
-      buyingGroupCoverage: 0,
-      nextAction: "bookExecutiveDemo",
+    await requirePermission(ctx, "manageLeads");
+
+    const scores = computeAccountScores({
+      stage: args.stage,
       members: [],
       signals: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+    });
+    const now = Date.now();
+
+    return await ctx.db.insert("growthAccounts", {
+      ...args,
+      ...scores,
+      members: [],
+      signals: [],
+      stageHistory: [{ stage: args.stage, occurredAt: now }],
+      createdAt: now,
+      updatedAt: now,
     });
   },
 });
 
+// nextAction is deliberately not a settable arg here — it's derived from
+// stage/signals/coverage by computeAccountScores below, so a manual value
+// would just get overwritten on the next recompute anyway.
 export const updateAccount = mutation({
   args: {
     accountId: v.id("growthAccounts"),
@@ -161,30 +173,54 @@ export const updateAccount = mutation({
         v.literal("renewal"),
       ),
     ),
-    nextAction: v.optional(
-      v.union(
-        v.literal("bookExecutiveDemo"),
-        v.literal("shareSecurityGuide"),
-        v.literal("inviteSecondAdmin"),
-        v.literal("resolveSupportBlocker"),
-        v.literal("launchRenewalReview"),
-      ),
-    ),
     owner: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageLeads");
+
     const { accountId, ...patch } = args;
-    await ctx.db.patch(accountId, { ...patch, updatedAt: Date.now() });
+    const account = await ctx.db.get(accountId);
+    if (!account) throw new Error("Account not found");
+
+    const stage = patch.stage ?? account.stage;
+    const scores = computeAccountScores({
+      stage,
+      members: account.members,
+      signals: account.signals,
+    });
+    const now = Date.now();
+    const stageChanged = patch.stage !== undefined && patch.stage !== account.stage;
+    const stageHistory = stageChanged
+      ? [...(account.stageHistory ?? []), { stage, occurredAt: now }]
+      : account.stageHistory;
+
+    await ctx.db.patch(accountId, {
+      ...patch,
+      ...scores,
+      ...(stageHistory ? { stageHistory } : {}),
+      updatedAt: now,
+    });
   },
 });
 
 export const addSignal = mutation({
   args: { accountId: v.id("growthAccounts"), signal: growthSignal },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageLeads");
+
     const account = await ctx.db.get(args.accountId);
     if (!account) throw new Error("Account not found");
+
+    const signals = [args.signal, ...account.signals];
+    const scores = computeAccountScores({
+      stage: account.stage,
+      members: account.members,
+      signals,
+    });
+
     await ctx.db.patch(args.accountId, {
-      signals: [args.signal, ...account.signals],
+      signals,
+      ...scores,
       updatedAt: Date.now(),
     });
   },
@@ -193,10 +229,21 @@ export const addSignal = mutation({
 export const addMember = mutation({
   args: { accountId: v.id("growthAccounts"), member: buyingMember },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageLeads");
+
     const account = await ctx.db.get(args.accountId);
     if (!account) throw new Error("Account not found");
+
+    const members = [...account.members, args.member];
+    const scores = computeAccountScores({
+      stage: account.stage,
+      members,
+      signals: account.signals,
+    });
+
     await ctx.db.patch(args.accountId, {
-      members: [...account.members, args.member],
+      members,
+      ...scores,
       updatedAt: Date.now(),
     });
   },
@@ -205,6 +252,7 @@ export const addMember = mutation({
 export const deleteAccount = mutation({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageLeads");
     await ctx.db.delete(args.accountId);
   },
 });

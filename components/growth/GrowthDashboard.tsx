@@ -13,7 +13,7 @@ import {
 import { useFormatter, useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
-import type { GrowthAccount } from "@/types/growth";
+import type { CampaignImpact, GrowthAccount } from "@/types/growth";
 import {
   AccountAvatar,
   DemoModeBanner,
@@ -22,12 +22,21 @@ import {
   StagePill,
 } from "./GrowthPrimitives";
 import { journeyStages, signalSources } from "@/lib/growth-data";
+import {
+  computeActivationRate,
+  computeAverageSalesCycleDays,
+  computeCustomerAcquisitionCost,
+} from "@/lib/growth-metrics";
+
+const EMPTY_CAMPAIGNS: CampaignImpact[] = [];
 
 export default function GrowthDashboard() {
   const t = useTranslations("growth");
   const format = useFormatter();
   const growthAccounts = (useQuery(api.growth.listAccounts) ??
     []) as GrowthAccount[];
+  const campaigns = (useQuery(api.campaigns.listCampaigns) ??
+    EMPTY_CAMPAIGNS) as CampaignImpact[];
   const prioritized = [...growthAccounts]
     .sort((a, b) => b.intentScore - a.intentScore)
     .slice(0, 3);
@@ -41,6 +50,9 @@ export default function GrowthDashboard() {
     (total, account) => total + account.pipelineValue,
     0,
   );
+  const acquisitionCost = computeCustomerAcquisitionCost(campaigns);
+  const salesCycleDays = computeAverageSalesCycleDays(growthAccounts);
+  const activationRate = computeActivationRate(growthAccounts);
 
   return (
     <>
@@ -63,22 +75,36 @@ export default function GrowthDashboard() {
         <MetricCard
           icon={CircleDollarSign}
           label={t("metrics.acquisitionCost")}
-          value="$1.24K"
-          change={t("metrics.down", { value: 18 })}
+          value={
+            acquisitionCost === null
+              ? t("metrics.noDataYet")
+              : format.number(acquisitionCost, {
+                  style: "currency",
+                  currency: "USD",
+                  notation: "compact",
+                  maximumFractionDigits: 1,
+                })
+          }
           tone="bg-emerald-50 text-emerald-700"
         />
         <MetricCard
           icon={TimerReset}
           label={t("metrics.salesCycle")}
-          value={t("metrics.days", { value: 24 })}
-          change={t("metrics.faster", { value: 9 })}
+          value={
+            salesCycleDays === null
+              ? t("metrics.noDataYet")
+              : t("metrics.days", { value: Math.round(salesCycleDays) })
+          }
           tone="bg-violet-50 text-violet-700"
         />
         <MetricCard
           icon={UserCheck}
           label={t("metrics.activationRate")}
-          value="64%"
-          change={t("metrics.up", { value: 12 })}
+          value={
+            activationRate === null
+              ? t("metrics.noDataYet")
+              : format.number(activationRate / 100, { style: "percent" })
+          }
           tone="bg-blue-50 text-blue-700"
         />
         <MetricCard
@@ -90,7 +116,6 @@ export default function GrowthDashboard() {
             notation: "compact",
             maximumFractionDigits: 1,
           })}
-          change={t("metrics.up", { value: 21 })}
           tone="bg-amber-50 text-amber-700"
         />
       </section>

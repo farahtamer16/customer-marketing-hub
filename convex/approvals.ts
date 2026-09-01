@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireMember, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
   v.literal("ownerAdmin"),
@@ -40,6 +41,8 @@ export const createPost = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "publishContent");
+
     const now = Date.now();
     const identity = await ctx.auth.getUserIdentity();
     const actor = identity?.name ?? args.author;
@@ -81,8 +84,16 @@ export const decide = mutation({
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Approval post not found");
 
-    const identity = await ctx.auth.getUserIdentity();
-    const actor = identity?.name ?? identity?.email ?? "Reviewer";
+    const member = await requireMember(ctx);
+    const currentStep = post.steps.find((step) => step.status === "current");
+    if (!currentStep) throw new Error("This post has no step awaiting a decision");
+    if (member.role !== "ownerAdmin" && member.role !== currentStep.role) {
+      throw new Error(
+        `This step is awaiting a decision from the ${currentStep.role} role — you're a ${member.role}.`,
+      );
+    }
+
+    const actor = member.name;
     const now = Date.now();
 
     const nextStatus =

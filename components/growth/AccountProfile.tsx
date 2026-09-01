@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -23,6 +24,7 @@ import {
   SourcePill,
   StagePill,
 } from "./GrowthPrimitives";
+import LogSignalDialog from "./LogSignalDialog";
 
 export default function AccountProfile({
   account,
@@ -31,6 +33,7 @@ export default function AccountProfile({
 }) {
   const t = useTranslations("growth");
   const format = useFormatter();
+  const [logSignalOpen, setLogSignalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -220,9 +223,10 @@ export default function AccountProfile({
             </p>
             <button
               type="button"
+              onClick={() => setLogSignalOpen(true)}
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#173b9a]"
             >
-              {t("accountDetail.createAction")} <ArrowUpRight size={15} />
+              {t("accountDetail.logSignal")} <ArrowUpRight size={15} />
             </button>
           </article>
 
@@ -270,6 +274,11 @@ export default function AccountProfile({
           </article>
         </div>
       </section>
+      <LogSignalDialog
+        open={logSignalOpen}
+        onClose={() => setLogSignalOpen(false)}
+        accountId={account.id}
+      />
     </div>
   );
 }

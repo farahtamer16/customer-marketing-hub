@@ -12,17 +12,26 @@ import {
 import { useFormatter, useTranslations } from "next-intl";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
-import type { CampaignImpact } from "@/types/growth";
+import type { CampaignImpact, GrowthAccount } from "@/types/growth";
 import { DemoModeBanner, MetricCard, SourcePill } from "./GrowthPrimitives";
 import NewCampaignDialog from "./NewCampaignDialog";
+import {
+  computeActivationRate,
+  computeCacHealthScore,
+  computeRetentionRate,
+  computeSalesCycleHealthScore,
+} from "@/lib/growth-metrics";
 
 const EMPTY_CAMPAIGNS: CampaignImpact[] = [];
+const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 
 export default function RevenueImpact() {
   const t = useTranslations("growth");
   const format = useFormatter();
   const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
     EMPTY_CAMPAIGNS) as CampaignImpact[];
+  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+    EMPTY_ACCOUNTS) as GrowthAccount[];
   const [newCampaignOpen, setNewCampaignOpen] = useState(false);
   const totals = campaignImpact.reduce(
     (result, campaign) => ({
@@ -75,13 +84,11 @@ export default function RevenueImpact() {
             currency: "USD",
             notation: "compact",
           })}
-          change="+21%"
         />
         <MetricCard
           icon={ChartNoAxesCombined}
           label={t("revenue.conversion")}
           value={format.number(conversion, { style: "percent" })}
-          change="+8%"
           tone="bg-violet-50 text-violet-700"
         />
         <MetricCard
@@ -90,7 +97,6 @@ export default function RevenueImpact() {
           value={format.number(retention, {
             style: "percent",
           })}
-          change="+6%"
           tone="bg-emerald-50 text-emerald-700"
         />
         <MetricCard
@@ -101,7 +107,6 @@ export default function RevenueImpact() {
             currency: "USD",
             notation: "compact",
           })}
-          change="+14%"
           tone="bg-amber-50 text-amber-700"
         />
       </section>
@@ -197,21 +202,31 @@ export default function RevenueImpact() {
               {t("revenue.outcomes")}
             </h2>
             <div className="mt-5 space-y-4">
-              {[
-                [t("revenue.lowerCac"), 82],
-                [t("revenue.shorterCycle"), 71],
-                [t("revenue.activation"), 64],
-                [t("revenue.retention"), 89],
-              ].map(([label, value]) => (
-                <div key={label as string}>
+              {(
+                [
+                  { label: t("revenue.lowerCac"), value: computeCacHealthScore(campaignImpact) },
+                  {
+                    label: t("revenue.shorterCycle"),
+                    value: computeSalesCycleHealthScore(growthAccounts),
+                  },
+                  {
+                    label: t("revenue.activation"),
+                    value: computeActivationRate(growthAccounts),
+                  },
+                  { label: t("revenue.retention"), value: computeRetentionRate(campaignImpact) },
+                ] as { label: string; value: number | null }[]
+              ).map(({ label, value }) => (
+                <div key={label}>
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">{label}</span>
-                    <span className="font-bold text-[#071e55]">{value}%</span>
+                    <span className="font-bold text-[#071e55]">
+                      {value === null ? t("metrics.noDataYet") : `${Math.round(value)}%`}
+                    </span>
                   </div>
                   <div className="mt-2 h-1.5 rounded-full bg-slate-100">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-[#3156dc] to-[#6fd7b6]"
-                      style={{ width: `${value}%` }}
+                      style={{ width: `${value ?? 0}%` }}
                     />
                   </div>
                 </div>

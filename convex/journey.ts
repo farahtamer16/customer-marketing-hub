@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requirePermission } from "./authz";
 
 export const listSteps = query({
   handler: async (ctx) => {
@@ -25,6 +26,7 @@ export const setStepCompleted = mutation({
     completed: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageWorkspace");
     const step = await ctx.db
       .query("journeySteps")
       .withIndex("by_stage", (q) => q.eq("stage", args.stage))

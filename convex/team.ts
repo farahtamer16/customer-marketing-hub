@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requirePermission } from "./authz";
 
 const workspaceRole = v.union(
   v.literal("ownerAdmin"),
@@ -99,6 +100,8 @@ export const inviteMember = mutation({
     role: workspaceRole,
   },
   handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "manageTeam");
+
     const existing = await ctx.db
       .query("teamMembers")
       .withIndex("by_email", (q) => q.eq("email", args.email))
@@ -113,9 +116,8 @@ export const inviteMember = mutation({
       createdAt: Date.now(),
     });
 
-    const identity = await ctx.auth.getUserIdentity();
     await ctx.db.insert("auditLog", {
-      actor: identity?.name ?? identity?.email ?? "Workspace admin",
+      actor: actor.name,
       action: "memberInvited",
       target: args.name,
       occurredAt: Date.now(),
@@ -128,14 +130,15 @@ export const inviteMember = mutation({
 export const updateMemberRole = mutation({
   args: { memberId: v.id("teamMembers"), role: workspaceRole },
   handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "manageTeam");
+
     const member = await ctx.db.get(args.memberId);
     if (!member) throw new Error("Member not found");
 
     await ctx.db.patch(args.memberId, { role: args.role });
 
-    const identity = await ctx.auth.getUserIdentity();
     await ctx.db.insert("auditLog", {
-      actor: identity?.name ?? identity?.email ?? "Workspace admin",
+      actor: actor.name,
       action: "roleChanged",
       target: `${member.name} → ${args.role}`,
       occurredAt: Date.now(),
@@ -146,6 +149,7 @@ export const updateMemberRole = mutation({
 export const removeMember = mutation({
   args: { memberId: v.id("teamMembers") },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
     await ctx.db.delete(args.memberId);
   },
 });

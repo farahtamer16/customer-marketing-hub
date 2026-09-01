@@ -69,6 +69,7 @@ export interface GrowthAccount {
   nextAction: NextAction;
   members: BuyingMember[];
   signals: GrowthSignal[];
+  stageHistory: { stage: GrowthStage; occurredAt: number }[];
 }
 
 export interface GrowthLead {

@@ -225,6 +225,25 @@ export default defineSchema({
         postId: v.optional(v.string()),
       }),
     ),
+    // Timestamped record of every stage transition, oldest first. Optional
+    // because accounts created before this field existed have none — used to
+    // compute a real sales-cycle length instead of a hardcoded number.
+    stageHistory: v.optional(
+      v.array(
+        v.object({
+          stage: v.union(
+            v.literal("discover"),
+            v.literal("engaged"),
+            v.literal("demo"),
+            v.literal("trial"),
+            v.literal("activated"),
+            v.literal("customer"),
+            v.literal("renewal"),
+          ),
+          occurredAt: v.number(),
+        }),
+      ),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_stage", ["stage"]),
