@@ -13,11 +13,11 @@ export default function CommentsPage() {
 
   const comments = useQuery(
     api.comments.getCommentsForUser,
-    userId ? { userId } : "skip",
+    userId ? {} : "skip",
   );
   const posts = useQuery(
     api.posts.getPostsForUser,
-    userId ? { userId } : "skip",
+    userId ? {} : "skip",
   );
 
   if (comments === undefined || posts === undefined) {

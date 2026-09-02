@@ -1,6 +1,6 @@
-import { query, mutation, internalMutation, internalAction } from "./_generated/server";
+import { query, mutation, internalMutation, internalAction, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { requireMember, requirePermission } from "./authz";
 
@@ -13,12 +13,26 @@ const workspaceRole = v.union(
 
 export const listPosts = query({
   handler: async (ctx) => {
+    // Any workspace member can be assigned an approval step regardless of
+    // role, so this only checks membership, not a specific permission.
+    await requireMember(ctx);
     const posts = await ctx.db.query("approvalPosts").collect();
     return posts.map((post) => ({ id: post._id, ...post }));
   },
 });
 
 export const getPost = query({
+  args: { postId: v.id("approvalPosts") },
+  handler: async (ctx, args) => {
+    await requireMember(ctx);
+    const post = await ctx.db.get(args.postId);
+    return post ? { id: post._id, ...post } : null;
+  },
+});
+
+// Same lookup, no membership check — for the internal auto-publish pipeline
+// below, which runs on a scheduled action with no signed-in caller to check.
+export const getPostInternal = internalQuery({
   args: { postId: v.id("approvalPosts") },
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId);
@@ -196,7 +210,7 @@ export const decide = mutation({
 export const publishApprovedPost = internalAction({
   args: { postId: v.id("approvalPosts") },
   handler: async (ctx, args): Promise<void> => {
-    const post = await ctx.runQuery(api.approvals.getPost, { postId: args.postId });
+    const post = await ctx.runQuery(internal.approvals.getPostInternal, { postId: args.postId });
     if (!post) return;
 
     if (!post.authorUserId) {

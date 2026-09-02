@@ -16,7 +16,7 @@ export default function ContentCalendar() {
   const { user, isLoaded } = useUser();
   const posts = useQuery(
     api.posts.getPostsForUser,
-    user ? { userId: user.id } : "skip",
+    user ? {} : "skip",
   );
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const now = new Date();

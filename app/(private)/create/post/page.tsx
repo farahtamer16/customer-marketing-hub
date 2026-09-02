@@ -150,7 +150,6 @@ export default function CreatePage() {
 
       for (const platform of platforms) {
         await schedulePost({
-          userId,
           content,
           scheduledAt,
           platform,

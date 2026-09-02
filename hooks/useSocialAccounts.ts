@@ -26,7 +26,7 @@ export function useSocialAccounts() {
   const disconnectAccount = useMutation(api.socialAccounts.disconnectAccount);
   const storedAccounts = useQuery(
     api.socialAccounts.getAccountsForUser,
-    userId ? { userId } : "skip",
+    userId ? {} : "skip",
   ) as SocialAccount[] | undefined;
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export function useSocialAccounts() {
       const name = channelConfigs[channel].name;
       const toastId = toast.loading(`Disconnecting ${name}...`);
       try {
-        await disconnectAccount({ userId, platform });
+        await disconnectAccount({ platform });
         toast.success(`${name} disconnected.`, { id: toastId });
       } catch (error) {
         toast.error(

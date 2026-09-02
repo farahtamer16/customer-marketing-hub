@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "convex/react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -10,10 +11,12 @@ import {
   CircleDollarSign,
   Lightbulb,
   Mail,
+  Scale,
   UsersRound,
   Wand2,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
 import type { GrowthAccount } from "@/types/growth";
 import { journeyStages } from "@/lib/growth-data";
 import {
@@ -37,6 +40,9 @@ export default function AccountProfile({
   const format = useFormatter();
   const [logSignalOpen, setLogSignalOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
+  // A real benchmark, not a guess: what accounts of this tier actually
+  // turned into once they closed.
+  const estimate = useQuery(api.growth.estimateOutcomes, { tier: account.tier });
 
   return (
     <div className="space-y-6">
@@ -130,6 +136,32 @@ export default function AccountProfile({
           })}
         />
       </section>
+
+      {estimate && (
+        <section className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-600">
+          <Scale size={15} className="mt-0.5 shrink-0 text-slate-400" />
+          <p className="leading-5">
+            {t(
+              estimate.sameTier
+                ? "accountDetail.benchmarkSameTier"
+                : "accountDetail.benchmarkAllTiers",
+              {
+                count: estimate.sampleSize,
+                pipeline: format.number(estimate.avgPipeline, {
+                  style: "currency",
+                  currency: "USD",
+                  notation: "compact",
+                }),
+                ltv: format.number(estimate.avgLtv, {
+                  style: "currency",
+                  currency: "USD",
+                  notation: "compact",
+                }),
+              },
+            )}
+          </p>
+        </section>
+      )}
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <article className="glass-card rounded-3xl p-6">

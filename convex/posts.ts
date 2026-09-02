@@ -1,8 +1,13 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
-export const recordPublishedPost = mutation({
+// Internal-only: only ever called from convex/meta.ts after it has already
+// derived the real publisher's identity server-side (never reachable from
+// the browser, so there's nothing here for a client to spoof).
+export const recordPublishedPost = internalMutation({
   args: {
     userId: v.string(),
     platform: v.union(
@@ -48,60 +53,25 @@ export const recordPublishedPost = mutation({
   },
 });
 
-
- // convex/posts.ts
-
-export const markAnalyticsCollected = mutation({
+// Only ever called from meta.ts's fetchPostAnalytics, after it has already
+// verified the caller owns the post.
+export const markAnalyticsCollected = internalMutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.postId, {
       analyticsCollected: true,
-      lastAnalyticsScraped: Date.now(), // 👈 Update timestamp
+      lastAnalyticsScraped: Date.now(),
       updatedAt: Date.now(),
     });
   },
 });
 
-// ── Also add: Get posts that need analytics ──────────────────────
-export const getPostsWithoutAnalytics = query({
-  handler: async (ctx) => {
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_status", (q) => q.eq("status", "Published"))
-      .collect();
-
-    const postsWithoutAnalytics = [];
-    for (const post of posts) {
-      if (!post.postUrl) continue;
-
-      const analytics = await ctx.db
-        .query("analytics")
-        .withIndex("by_postId", (q) => q.eq("postId", post._id))
-        .first();
-
-      if (!analytics) {
-        postsWithoutAnalytics.push(post);
-      }
-    }
-
-    return postsWithoutAnalytics;
-  },
-});
-
-export const getPublishedPostsForUser = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("posts")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "Published"))
-      .collect();
-  },
-});
- 
+// Public entry point — called directly from the browser. Identity is
+// derived from the caller's own session, never trusted from an argument:
+// otherwise anyone signed in could schedule a post that publishes as a
+// different teammate.
 export const schedulePost = mutation({
   args: {
-    userId: v.string(),
     platform: v.union(
       v.literal("Instagram"),
       v.literal("Facebook"),
@@ -115,8 +85,10 @@ export const schedulePost = mutation({
     socialAccountId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
     const id = await ctx.db.insert("posts", {
-      userId: args.userId,
+      userId: identity.subject,
       platform: args.platform,
       content: args.content,
       mediaUrl: args.mediaUrl,
@@ -129,8 +101,25 @@ export const schedulePost = mutation({
     return id;
   },
 });
- 
+
+// The caller's own posts — identity-derived, no userId argument to spoof.
 export const getPostsForUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    return await ctx.db
+      .query("posts")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .order("desc")
+      .collect();
+  },
+});
+
+// Same lookup for a known, already-trusted userId — used by meta.ts's
+// findOwnPostByUrl, where the userId comes from a real identity or a
+// stored comment's userId, never from client input. Internal only.
+export const getPostsForUserInternal = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -153,9 +142,9 @@ export const listPublished = query({
       .collect();
   },
 });
- 
 
-export const getScheduledItems = query({
+// Only ever called from the cron pipeline (meta.processDuePosts).
+export const getScheduledItems = internalQuery({
   handler: async (ctx) => {
     const now = Date.now();
     return await ctx.db
@@ -166,54 +155,7 @@ export const getScheduledItems = query({
   },
 });
 
-
-export const getScheduledItemsForUser = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("posts")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "Scheduled"))
-      .collect();
-  },
-});
-
-// export const getPostsWithoutAnalytics = query({
-//   handler: async (ctx) => {
-//     const posts = await ctx.db
-//       .query("posts")
-//       .withIndex("by_status", (q) => q.eq("status", "Published"))
-//       .collect();
-
-//     const postsWithoutAnalytics = [];
-//     for (const post of posts) {
-//       if (!post.postUrl) continue;
-
-//       const analytics = await ctx.db
-//         .query("analytics")
-//         .withIndex("by_postId", (q) => q.eq("postId", post._id))
-//         .first();
-
-//       if (!analytics) {
-//         postsWithoutAnalytics.push(post);
-//       }
-//     }
-
-//     return postsWithoutAnalytics;
-//   },
-// });
-
-// export const markAnalyticsCollected = mutation({
-//   args: { postId: v.id("posts") },
-//   handler: async (ctx, args) => {
-//     await ctx.db.patch(args.postId, {
-//       analyticsCollected: true,
-//       updatedAt: Date.now(),
-//     });
-//   },
-// });
-
-export const markItemFailed = mutation({
+export const markItemFailed = internalMutation({
   args: { postId: v.id("posts"), error: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.postId, {
@@ -224,14 +166,11 @@ export const markItemFailed = mutation({
   },
 });
 
-
-// convex/posts.ts
-
-export const markItemPublished = mutation({
+export const markItemPublished = internalMutation({
   args: {
-    postId: v.id("posts"), // 👈 This is the ID of the post to update
+    postId: v.id("posts"),
     postUrl: v.optional(v.string()),
-    platformPostId: v.optional(v.string()), // 👈 Changed from 'postId' to 'platformPostId'
+    platformPostId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId);
@@ -240,7 +179,7 @@ export const markItemPublished = mutation({
       publishedAt: Date.now(),
       updatedAt: Date.now(),
       postUrl: args.postUrl,
-      platformPostId: args.platformPostId, // 👈 Store the platform's post ID
+      platformPostId: args.platformPostId,
     });
 
     // A scheduled post going live is just as real a "created a post" event
@@ -259,40 +198,71 @@ export const markItemPublished = mutation({
     }
   },
 });
+
+// Ownership is checked here, not just trusted from postId — otherwise any
+// signed-in user could cancel, delete, or retry another teammate's post by
+// guessing/enumerating an id.
+async function requireOwnPost(ctx: MutationCtx, postId: Id<"posts">) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  const post = await ctx.db.get(postId);
+  if (!post) throw new Error("Post not found");
+  if (post.userId !== identity.subject) {
+    throw new Error("You can only manage your own posts");
+  }
+  return post;
+}
+
 export const cancelScheduledItem = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.postId);
-    if (!item) throw new Error("Post not found");
+    const item = await requireOwnPost(ctx, args.postId);
     if (item.status !== "Scheduled") throw new Error("Only scheduled posts can be cancelled");
     await ctx.db.delete(args.postId);
   },
 });
- 
 
 export const deletePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    await requireOwnPost(ctx, args.postId);
     await ctx.db.delete(args.postId);
+  },
+});
+
+// Public entry point for a user manually pasting in the live post URL when
+// auto-detection didn't catch it — ownership is checked via requireOwnPost,
+// unlike the internal updatePostUrl below which the publish pipeline calls
+// with no signed-in caller to check against.
+export const setPostUrl = mutation({
+  args: {
+    postId: v.id("posts"),
+    postUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireOwnPost(ctx, args.postId);
+    await ctx.db.patch(args.postId, {
+      postUrl: args.postUrl,
+      updatedAt: Date.now(),
+    });
   },
 });
 
 export const retryPost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.postId);
-    if (!item) throw new Error("Post not found");
+    const item = await requireOwnPost(ctx, args.postId);
     if (item.status !== "Failed") throw new Error("Only failed posts can be retried");
     await ctx.db.patch(args.postId, {
       status: "Scheduled",
-      scheduledAt: Date.now() + 60000, 
+      scheduledAt: Date.now() + 60000,
       updatedAt: Date.now(),
     });
   },
 });
 
-
-export const markItemProcessing = mutation({
+// Only ever called from meta.ts's publish pipeline.
+export const markItemProcessing = internalMutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId);
@@ -308,7 +278,8 @@ export const markItemProcessing = mutation({
   },
 });
 
-export const updatePostUrl = mutation({
+// Only ever called from meta.ts's publish pipeline.
+export const updatePostUrl = internalMutation({
   args: {
     postId: v.id("posts"),
     postUrl: v.string(),
@@ -329,5 +300,3 @@ export const getPost = query({
     return await ctx.db.get(args.postId);
   },
 });
-
- 

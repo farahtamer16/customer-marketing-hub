@@ -54,7 +54,7 @@ function validatePostUrl(value: string, platform: Post["platform"]) {
 }
 
 export default function PostUrlControl({ post }: { post: Post }) {
-  const updatePostUrl = useMutation(api.posts.updatePostUrl);
+  const setPostUrl = useMutation(api.posts.setPostUrl);
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
@@ -119,7 +119,7 @@ export default function PostUrlControl({ post }: { post: Post }) {
     setIsSaving(true);
     setError("");
     try {
-      await updatePostUrl({ postId: post._id, postUrl });
+      await setPostUrl({ postId: post._id, postUrl });
       toast.success("Post URL saved.");
       close();
     } catch (saveError) {

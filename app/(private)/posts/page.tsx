@@ -13,7 +13,7 @@ export default function PostsPage() {
 
   const posts = useQuery(
     api.posts.getPostsForUser,
-    userId ? { userId } : "skip",
+    userId ? {} : "skip",
   );
 
   if (posts === undefined) {

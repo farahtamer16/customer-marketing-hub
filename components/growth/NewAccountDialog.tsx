@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
-import { Building2, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useMutation, useQuery } from "convex/react";
+import { Building2, Sparkles, X } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { journeyStages } from "@/lib/growth-data";
@@ -19,6 +19,7 @@ export default function NewAccountDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("growth");
+  const format = useFormatter();
   const createAccount = useMutation(api.growth.createAccount);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
@@ -31,6 +32,16 @@ export default function NewAccountDialog({
   const [ltv, setLtv] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const valid = name.trim().length >= 2 && domain.trim().length >= 2 && owner.trim().length >= 2;
+
+  // A real benchmark from what accounts of this tier actually became once
+  // they closed — not a guess. Re-queries whenever tier changes.
+  const estimate = useQuery(api.growth.estimateOutcomes, { tier });
+
+  const applyEstimate = () => {
+    if (!estimate) return;
+    setPipelineValue(String(estimate.avgPipeline));
+    setLtv(String(estimate.avgLtv));
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -195,6 +206,38 @@ export default function NewAccountDialog({
               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             />
           </label>
+          {estimate && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-blue-50 px-4 py-3 text-xs text-blue-800">
+              <span className="inline-flex items-center gap-1.5">
+                <Sparkles size={13} className="shrink-0" />
+                {t(
+                  estimate.sameTier
+                    ? "accounts.estimateSameTier"
+                    : "accounts.estimateAllTiers",
+                  {
+                    count: estimate.sampleSize,
+                    pipeline: format.number(estimate.avgPipeline, {
+                      style: "currency",
+                      currency: "USD",
+                      notation: "compact",
+                    }),
+                    ltv: format.number(estimate.avgLtv, {
+                      style: "currency",
+                      currency: "USD",
+                      notation: "compact",
+                    }),
+                  },
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={applyEstimate}
+                className="shrink-0 rounded-lg bg-white px-3 py-1.5 font-bold text-blue-700 shadow-sm hover:bg-blue-100"
+              >
+                {t("accounts.useEstimate")}
+              </button>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-slate-700">
               {t("accounts.pipelineValue")}

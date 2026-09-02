@@ -68,6 +68,7 @@ function toAccount(doc: Doc<"growthAccounts">) {
 
 export const listAccounts = query({
   handler: async (ctx) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
     const accounts = await ctx.db.query("growthAccounts").collect();
     return accounts.map(toAccount);
   },
@@ -76,6 +77,7 @@ export const listAccounts = query({
 export const getAccount = query({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
     const account = await ctx.db.get(args.accountId);
     return account ? toAccount(account) : null;
   },
@@ -85,6 +87,7 @@ export const getAccount = query({
 // derived the same way the old static demo data computed them.
 export const listLeads = query({
   handler: async (ctx) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
     const accounts = await ctx.db.query("growthAccounts").collect();
     return accounts.flatMap((account) =>
       account.members
@@ -149,6 +152,49 @@ const growthSignal = v.object({
   occurredAt: v.number(),
   detail: v.optional(v.string()),
   postId: v.optional(v.string()),
+});
+
+// A real benchmark for a brand-new account's pipeline/LTV, computed from
+// what accounts of the same tier actually turned into once they became a
+// real customer — not a guess. Falls back to every closed-won account
+// (any tier) when there aren't enough same-tier data points yet, and
+// returns null rather than a fabricated number when there's no closed-won
+// history at all.
+const MIN_SAME_TIER_SAMPLE = 3;
+
+export const estimateOutcomes = query({
+  args: {
+    tier: v.union(
+      v.literal("enterprise"),
+      v.literal("midMarket"),
+      v.literal("smallBusiness"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageLeads");
+
+    const accounts = await ctx.db.query("growthAccounts").collect();
+    const closedWon = accounts.filter(
+      (account) => account.stage === "customer" || account.stage === "renewal",
+    );
+    const sameTier = closedWon.filter((account) => account.tier === args.tier);
+    const sample = sameTier.length >= MIN_SAME_TIER_SAMPLE ? sameTier : closedWon;
+    if (sample.length === 0) return null;
+
+    const avgPipeline = Math.round(
+      sample.reduce((sum, account) => sum + account.pipelineValue, 0) / sample.length,
+    );
+    const avgLtv = Math.round(
+      sample.reduce((sum, account) => sum + account.ltv, 0) / sample.length,
+    );
+
+    return {
+      avgPipeline,
+      avgLtv,
+      sampleSize: sample.length,
+      sameTier: sample === sameTier,
+    };
+  },
 });
 
 export const createAccount = mutation({

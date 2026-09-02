@@ -78,7 +78,7 @@ export function PostComposer({
   const { user } = useUser();
   const ownPosts = useQuery(
     api.posts.getPostsForUser,
-    mode === "comment" && user ? { userId: user.id } : "skip",
+    mode === "comment" && user ? {} : "skip",
   );
 
   const selectedChannelConfigs = COMPOSER_CHANNELS.filter((item) =>

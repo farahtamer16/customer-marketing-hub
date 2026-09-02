@@ -1,19 +1,6 @@
 // convex/analytics.ts
-import { query, mutation } from "./_generated/server";
+import { query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-
-// ── Get all analytics for a specific post ──────────────────────────
-export const getPostAnalytics = query({
-  args: { postId: v.id("posts") },
-  handler: async (ctx, args) => {
-    const docs = await ctx.db
-      .query("analytics")
-      .withIndex("by_postId", (q) => q.eq("postId", args.postId))
-      .order("desc")
-      .collect();
-    return { data: docs, count: docs.length };
-  },
-});
 
 // ── Get the most recent analytics entry for a post ─────────────────
 export const getLatestForPost = query({
@@ -28,7 +15,9 @@ export const getLatestForPost = query({
 });
 
 // ── Record a new analytics entry ────────────────────────────────────
-export const recordAnalytics = mutation({
+// Only ever called from meta.ts's fetchPostAnalytics, after it has already
+// verified the caller owns the post.
+export const recordAnalytics = internalMutation({
   args: {
     postId: v.id("posts"),
     userId: v.string(),
@@ -57,29 +46,45 @@ export const recordAnalytics = mutation({
 });
 
 // ── Dashboard overview (totals, averages, latest) ──────────────────
+// Identity is derived from the caller's own session, never trusted from an
+// argument — otherwise anyone signed in could read another teammate's
+// engagement numbers by passing their userId.
 export const getOverview = query({
   args: {
-    userId: v.string(),
     platform: v.optional(v.string()),
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId, platform, days } = args;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        totalLikes: 0,
+        totalComments: 0,
+        totalShares: 0,
+        totalReach: 0,
+        totalImpressions: 0,
+        avgLikes: 0,
+        avgComments: 0,
+        avgShares: 0,
+        avgEngagementRate: null,
+        totalPosts: 0,
+        latest: null,
+      };
+    }
+
+    const { platform, days } = args;
     const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
 
-    // Get all analytics for this user within the time window
     const analytics = await ctx.db
       .query("analytics")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.gte(q.field("scrapedAt"), since))
       .collect();
 
-    // Filter by platform if provided
     const filtered = platform
       ? analytics.filter((a) => a.platform === platform)
       : analytics;
 
-    // Compute totals
     let totalLikes = 0,
       totalComments = 0,
       totalShares = 0,
@@ -111,7 +116,6 @@ export const getOverview = query({
       ? engagementRateSum / entriesWithReach
       : null;
 
-    // Get the most recent scraped entry (overall)
     const latest = filtered.length ? filtered.reduce((a, b) => (a.scrapedAt > b.scrapedAt ? a : b)) : null;
 
     return {
@@ -130,105 +134,21 @@ export const getOverview = query({
   },
 });
 
-// ── Timeline data for charts ──────────────────────────────────────
-export const getTimeline = query({
-  args: {
-    userId: v.string(),
-    platform: v.optional(v.string()),
-    days: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, platform, days } = args;
-    const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
-
-    const analytics = await ctx.db
-      .query("analytics")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .filter((q) => q.gte(q.field("scrapedAt"), since))
-      .collect();
-
-    const filtered = platform
-      ? analytics.filter((a) => a.platform === platform)
-      : analytics;
-
-    // Group by day
-    const map = new Map<string, { likes: number; comments: number; shares: number }>();
-    for (const a of filtered) {
-      const date = new Date(a.scrapedAt).toISOString().split("T")[0];
-      const existing = map.get(date) || { likes: 0, comments: 0, shares: 0 };
-      existing.likes += a.likes;
-      existing.comments += a.comments;
-      existing.shares += a.shares ?? 0;
-      map.set(date, existing);
-    }
-
-    const timeline = Array.from(map.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, metrics]) => ({ date, ...metrics }));
-
-    return timeline;
-  },
-});
-
-// ── Top posts by total engagement ──────────────────────────────────
-export const getTopPosts = query({
-  args: {
-    userId: v.string(),
-    platform: v.optional(v.string()),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, platform, limit = 10 } = args;
-
-    // Get all posts for this user (with analytics)
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("status"), "Published"))
-      .collect();
-
-    const platformFiltered = platform
-      ? posts.filter((p) => p.platform === platform)
-      : posts;
-
-    // For each post, get its latest analytics
-    const result = [];
-    for (const post of platformFiltered) {
-      if (!post.postUrl) continue;
-      const latest = await ctx.db
-        .query("analytics")
-        .withIndex("by_postId", (q) => q.eq("postId", post._id))
-        .order("desc")
-        .first();
-      if (latest) {
-        const engagement = latest.likes + latest.comments + (latest.shares ?? 0);
-        result.push({
-          post,
-          analytics: latest,
-          engagement,
-        });
-      }
-    }
-
-    // Sort by engagement descending and limit
-    result.sort((a, b) => b.engagement - a.engagement);
-    return result.slice(0, limit);
-  },
-});
-
 // ── Get all posts with their latest analytics (for list view) ────
 export const getPostsWithAnalytics = query({
   args: {
-    userId: v.string(),
     platform: v.optional(v.string()),
     status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, platform, status } = args;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { data: [], count: 0 };
+
+    const { platform, status } = args;
 
     const posts = await ctx.db
       .query("posts")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .collect();
 
     let filtered = posts;

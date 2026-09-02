@@ -51,9 +51,8 @@ export default function CommentPage() {
         success: t("posted", { platform }),
       },
       async () => {
-        await publishCommentOnUrl({ userId, targetUrl, content });
+        await publishCommentOnUrl({ targetUrl, content });
         await createComment({
-          userId,
           targetUrl,
           authorName,
           content,
@@ -82,7 +81,6 @@ export default function CommentPage() {
       },
       async () => {
         await scheduleComment({
-          userId,
           targetUrl,
           authorName,
           content,

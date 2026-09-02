@@ -21,7 +21,7 @@ export function ConnectionDiagnostics({
     if (!user) return;
     setChecking(true);
     try {
-      const data = await debugConnection({ userId: user.id, platform });
+      const data = await debugConnection({ platform });
       setResult(data);
     } catch (error) {
       setResult({

@@ -31,11 +31,11 @@ export default function AnalyticsOverview() {
   const { user, isLoaded } = useUser();
   const overview = useQuery(
     api.analytics.getOverview,
-    user ? { userId: user.id } : "skip",
+    user ? {} : "skip",
   );
   const posts = useQuery(
     api.analytics.getPostsWithAnalytics,
-    user ? { userId: user.id, status: "Published" } : "skip",
+    user ? { status: "Published" } : "skip",
   );
 
   return (

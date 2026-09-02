@@ -71,7 +71,7 @@ export function usePostAnalytics(postId: Id<"posts">, userId: string) {
     setRefreshing(true);
     setError(null);
     try {
-      const result = await fetchPostAnalytics({ userId, postId });
+      const result = await fetchPostAnalytics({ postId });
       const snapshot: AnalyticsSnapshot = {
         likes: result.likes,
         comments: result.comments,

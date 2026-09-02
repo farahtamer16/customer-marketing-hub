@@ -57,6 +57,7 @@ async function computeSocialRollup(
 // socialImpressions/socialEngagement work the same way from linked posts.
 export const listCampaigns = query({
   handler: async (ctx) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
     const campaigns = await ctx.db.query("campaigns").collect();
     return await Promise.all(
       campaigns.map(async (campaign) => {

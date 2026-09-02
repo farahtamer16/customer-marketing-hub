@@ -13,9 +13,11 @@ export default function Sidebar() {
   const t = useTranslations("sidebar");
   const common = useTranslations("common");
   const { user } = useUser();
-  const userId = user?.id;
 
-  const accounts = useQuery(api.socialAccounts.getAccountsForUser, { userId });
+  const accounts = useQuery(
+    api.socialAccounts.getAccountsForUser,
+    user ? {} : "skip",
+  );
 
   return (
     <aside className="sticky top-0 z-30 hidden h-screen w-[18rem] shrink-0 flex-col overflow-y-auto border-e border-white/70 bg-[#eaf8f7]/85 px-5 py-6 backdrop-blur-2xl md:flex">

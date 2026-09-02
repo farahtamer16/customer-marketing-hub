@@ -1,13 +1,18 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
+// Called after fetching real comments via meta.fetchPostComments (which
+// already derived and verified the caller's identity), so every comment in
+// the batch is stamped with that one verified identity here rather than
+// trusting a per-comment userId from the client.
 export const storeComments = mutation({
   args: {
     comments: v.array(
       v.object({
         postId: v.id("posts"),
-        userId: v.string(),
         authorName: v.string(),
         content: v.string(),
         platform: v.union(v.literal("facebook"), v.literal("instagram")),
@@ -17,9 +22,12 @@ export const storeComments = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     for (const c of args.comments) {
       await ctx.db.insert("comments", {
-        userId: c.userId,
+        userId: identity.subject,
         targetUrl: "",
         postId: c.postId,
         authorName: c.authorName,
@@ -40,7 +48,7 @@ export const storeComments = mutation({
     }
   },
 });
- 
+
 export const getCommentsForPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
@@ -51,10 +59,11 @@ export const getCommentsForPost = query({
   },
 });
 
-
+// Identity is derived from the caller's own session, never trusted from an
+// argument — otherwise anyone signed in could post a comment "as" another
+// teammate's connected account.
 export const createComment = mutation({
   args: {
-    userId: v.string(),
     targetUrl: v.string(),
     authorName: v.string(),
     content: v.string(),
@@ -69,8 +78,10 @@ export const createComment = mutation({
     )),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
     return await ctx.db.insert("comments", {
-      userId: args.userId,
+      userId: identity.subject,
       targetUrl: args.targetUrl,
       authorName: args.authorName,
       content: args.content,
@@ -84,7 +95,6 @@ export const createComment = mutation({
 
 export const scheduleComment = mutation({
   args: {
-    userId: v.string(),
     targetUrl: v.string(),
     authorName: v.string(),
     content: v.string(),
@@ -100,8 +110,10 @@ export const scheduleComment = mutation({
     )),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
     return await ctx.db.insert("comments", {
-      userId: args.userId,
+      userId: identity.subject,
       targetUrl: args.targetUrl,
       authorName: args.authorName,
       content: args.content,
@@ -114,7 +126,8 @@ export const scheduleComment = mutation({
   },
 });
 
-export const getScheduledComments = query({
+// Only ever called from the cron pipeline (meta.processDueComments).
+export const getScheduledComments = internalQuery({
   handler: async (ctx) => {
     const now = Date.now();
     return await ctx.db
@@ -126,7 +139,7 @@ export const getScheduledComments = query({
   },
 });
 
-export const markCommentProcessing = mutation({
+export const markCommentProcessing = internalMutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
     const comment = await ctx.db.get(args.commentId);
@@ -138,7 +151,7 @@ export const markCommentProcessing = mutation({
   },
 });
 
-export const markCommentPublished = mutation({
+export const markCommentPublished = internalMutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.commentId, {
@@ -147,7 +160,7 @@ export const markCommentPublished = mutation({
   },
 });
 
-export const markCommentFailed = mutation({
+export const markCommentFailed = internalMutation({
   args: { commentId: v.id("comments"), error: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.commentId, {
@@ -157,19 +170,34 @@ export const markCommentFailed = mutation({
   },
 });
 
+// The caller's own comments — identity-derived, no userId argument to spoof.
 export const getCommentsForUser = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
     return await ctx.db
       .query("comments")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .collect();
   },
 });
 
+async function requireOwnComment(ctx: MutationCtx, commentId: Id<"comments">) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  const comment = await ctx.db.get(commentId);
+  if (!comment) throw new Error("Comment not found");
+  if (comment.userId !== identity.subject) {
+    throw new Error("You can only manage your own comments");
+  }
+  return comment;
+}
+
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
+    await requireOwnComment(ctx, args.commentId);
     await ctx.db.delete(args.commentId);
   },
 });

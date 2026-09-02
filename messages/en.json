@@ -1006,6 +1006,9 @@
       "owner": "Owner",
       "pipelineValue": "Pipeline value ($)",
       "ltv": "Projected LTV ($)",
+      "estimateSameTier": "Based on {count, plural, =1 {1 account} other {# accounts}} of this tier that became customers: pipeline ≈ {pipeline}, LTV ≈ {ltv}.",
+      "estimateAllTiers": "Not enough same-tier history yet — based on {count, plural, =1 {1 account} other {# accounts}} across all tiers that became customers: pipeline ≈ {pipeline}, LTV ≈ {ltv}.",
+      "useEstimate": "Use estimate",
       "cancel": "Cancel",
       "create": "Add account",
       "createFailed": "Failed to add account"
@@ -1016,6 +1019,8 @@
       "companySize": "Employees",
       "knownPeople": "Known people",
       "projectedLtv": "Projected LTV",
+      "benchmarkSameTier": "Peer benchmark: accounts of this tier that became customers ({count, plural, =1 {1 account} other {# accounts}}) averaged {pipeline} pipeline and {ltv} LTV.",
+      "benchmarkAllTiers": "Peer benchmark (all tiers, not enough same-tier history yet): closed-won accounts ({count, plural, =1 {1 account} other {# accounts}}) averaged {pipeline} pipeline and {ltv} LTV.",
       "journey": "First visit to renewal",
       "journeyHint": "A unified timeline of website, campaign, social, CRM, product, and support activity.",
       "viewSocial": "View social posts",

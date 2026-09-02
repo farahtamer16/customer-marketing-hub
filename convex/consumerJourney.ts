@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requirePermission } from "./authz";
 
 // visitorId is a browser-generated id (see hooks/useVisitorId.ts), stored
 // in localStorage on the public landing page — this is anonymous tracking
@@ -126,6 +127,7 @@ export const captureLead = mutation({
 // the team can see and follow up with, not just a funnel count.
 export const listCapturedLeads = query({
   handler: async (ctx) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
     const visitors = await ctx.db.query("consumerVisitors").collect();
     return visitors
       .filter((visitor) => visitor.email && visitor.emailCapturedAt)
@@ -145,6 +147,7 @@ export const listCapturedLeads = query({
 // with what actually happened.
 export const listFunnel = query({
   handler: async (ctx) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
     const visitors = await ctx.db.query("consumerVisitors").collect();
     const posts = await ctx.db.query("posts").collect();
     const publishedCountByUser = new Map<string, number>();

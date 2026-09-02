@@ -36,8 +36,11 @@ const permissionsByRole: Record<WorkspaceRole, WorkspacePermission[]> = {
 
 // Throws unless the signed-in caller is a workspace member with the given
 // permission. Use in every mutation that changes shared workspace state
-// (accounts, campaigns, team, approvals) — queries stay open for now since
-// this is a single-workspace app and reads aren't the sensitive surface.
+// (accounts, campaigns, team, approvals), and in any query that reads
+// shared CRM/executive data (accounts, leads, campaigns, team, audit) — a
+// socialMediaUser role has none of these permissions, so gating the reads
+// too is what actually keeps that role from seeing revenue and people data
+// just by knowing the URL.
 export async function requirePermission(
   ctx: QueryCtx | MutationCtx,
   permission: WorkspacePermission,

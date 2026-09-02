@@ -103,7 +103,7 @@ export function usePostComments(postId: Id<"posts">, userId: string) {
     setError(null);
 
     try {
-      const result = (await fetchPostComments({ userId, postId })) as CommentsResponse;
+      const result = (await fetchPostComments({ postId })) as CommentsResponse;
       if (result.success === false) {
         throw new Error(result.error || "Failed to fetch comments");
       }
@@ -151,7 +151,6 @@ export function usePostComments(postId: Id<"posts">, userId: string) {
         await storeComments({
           comments: newComments.map((comment) => ({
             postId,
-            userId,
             authorName: comment.authorName,
             content: comment.content,
             platform: comment.platform,

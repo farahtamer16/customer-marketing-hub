@@ -18,7 +18,7 @@ export default function PostDetailPage() {
   const post = useQuery(api.posts.getPost, { postId: id });
   const comments = useQuery(
     api.comments.getCommentsForUser,
-    user ? { userId: user.id } : "skip",
+    user ? {} : "skip",
   );
   const relatedComments = useMemo(() => {
     if (!post || !comments) return [];

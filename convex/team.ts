@@ -19,6 +19,7 @@ const dashboardRoleByWorkspaceRole = {
 
 export const listMembers = query({
   handler: async (ctx) => {
+    await requirePermission(ctx, "manageTeam");
     const members = await ctx.db.query("teamMembers").collect();
     return members.map((member) => ({
       id: member._id,

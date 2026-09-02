@@ -25,60 +25,25 @@ function toPublicAccount(doc: {
   };
 }
 
+// Identity is derived from the caller's own session, never trusted from an
+// argument — otherwise any signed-in user could pass another teammate's id
+// and read (or, in disconnectAccount below, delete) their real Meta
+// connection.
 export const getAccountsForUser = query({
-  args: { userId: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    if (!args.userId) return [];
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
     const accounts = await ctx.db
       .query("socialAccounts")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .collect();
     return accounts.map(toPublicAccount);
   },
 });
 
-export const connectAccount = mutation({
-  args: {
-    userId: v.string(),
-    platform: v.union(
-      v.literal("Instagram"),
-      v.literal("Facebook"),
-      v.literal("LinkedIn"),
-      v.literal("TikTok"),
-      v.literal("X"),
-    ),
-    accountName: v.string(),
-    accountHandle: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("socialAccounts")
-      .withIndex("by_userId_platform", (q) =>
-        q.eq("userId", args.userId).eq("platform", args.platform),
-      )
-      .first();
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        accountName: args.accountName,
-        accountHandle: args.accountHandle,
-        status: "Connected",
-      });
-      return existing._id;
-    }
-    return await ctx.db.insert("socialAccounts", {
-      userId: args.userId,
-      platform: args.platform,
-      accountName: args.accountName,
-      accountHandle: args.accountHandle,
-      status: "Connected",
-      createdAt: Date.now(),
-    });
-  },
-});
-
 export const disconnectAccount = mutation({
   args: {
-    userId: v.string(),
     platform: v.union(
       v.literal("Instagram"),
       v.literal("Facebook"),
@@ -88,10 +53,12 @@ export const disconnectAccount = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
     const existing = await ctx.db
       .query("socialAccounts")
       .withIndex("by_userId_platform", (q) =>
-        q.eq("userId", args.userId).eq("platform", args.platform),
+        q.eq("userId", identity.subject).eq("platform", args.platform),
       )
       .first();
     if (existing) {

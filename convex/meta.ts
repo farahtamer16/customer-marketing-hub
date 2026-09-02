@@ -155,13 +155,13 @@ export const publishFacebookPostAs = internalAction({
     const platformPostId: string = result.post_id ?? result.id;
     const postUrl = `https://www.facebook.com/${platformPostId}`;
 
-    const postId: Id<"posts"> = await ctx.runMutation(api.posts.recordPublishedPost, {
+    const postId: Id<"posts"> = await ctx.runMutation(internal.posts.recordPublishedPost, {
       userId: args.userId,
       platform: "Facebook",
       content: args.content,
       mediaUrl: imageUrl,
     });
-    await ctx.runMutation(api.posts.updatePostUrl, { postId, postUrl, platformPostId });
+    await ctx.runMutation(internal.posts.updatePostUrl, { postId, postUrl, platformPostId });
 
     return { postId, postUrl };
   },
@@ -239,13 +239,13 @@ export const publishInstagramPostAs = internalAction({
       }
     }
 
-    const postId: Id<"posts"> = await ctx.runMutation(api.posts.recordPublishedPost, {
+    const postId: Id<"posts"> = await ctx.runMutation(internal.posts.recordPublishedPost, {
       userId: args.userId,
       platform: "Instagram",
       content: args.caption,
       mediaUrl: imageUrl,
     });
-    await ctx.runMutation(api.posts.updatePostUrl, { postId, postUrl, platformPostId });
+    await ctx.runMutation(internal.posts.updatePostUrl, { postId, postUrl, platformPostId });
 
     return { postId, postUrl };
   },
@@ -309,13 +309,13 @@ export const publishScheduledPost = action({
         postUrl = `https://www.facebook.com/${platformPostId}`;
       }
 
-      await ctx.runMutation(api.posts.markItemPublished, {
+      await ctx.runMutation(internal.posts.markItemPublished, {
         postId: args.postId,
         postUrl,
         platformPostId,
       });
     } catch (error) {
-      await ctx.runMutation(api.posts.markItemFailed, {
+      await ctx.runMutation(internal.posts.markItemFailed, {
         postId: args.postId,
         error: error instanceof Error ? error.message : "Failed to publish",
       });
@@ -328,22 +328,32 @@ export const publishScheduledPost = action({
 export const processDuePosts = internalAction({
   args: {},
   handler: async (ctx) => {
-    const duePosts = await ctx.runQuery(api.posts.getScheduledItems, {});
+    const duePosts = await ctx.runQuery(internal.posts.getScheduledItems, {});
     for (const post of duePosts) {
-      await ctx.runMutation(api.posts.markItemProcessing, { postId: post._id });
+      await ctx.runMutation(internal.posts.markItemProcessing, { postId: post._id });
       await ctx.runAction(api.meta.publishScheduledPost, { postId: post._id });
     }
   },
 });
 
+// Identity is derived from the caller's own session, never trusted from an
+// argument, and the post is verified to belong to that identity before its
+// credentials or analytics are touched — otherwise anyone signed in could
+// pass any postId and pull another teammate's engagement data.
 export const fetchPostAnalytics = action({
-  args: { userId: v.string(), postId: v.id("posts") },
+  args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     const post = await ctx.runQuery(api.posts.getPost, { postId: args.postId });
     if (!post || !post.platformPostId) throw new Error("Post has not been published yet");
+    if (post.userId !== identity.subject) {
+      throw new Error("You can only refresh analytics for your own posts");
+    }
 
     const credentials = await ctx.runQuery(internal.socialAccounts.getMetaCredentials, {
-      userId: args.userId,
+      userId: identity.subject,
       platform: post.platform === "Instagram" ? "Instagram" : "Facebook",
     });
     if (!credentials) throw new Error(`${post.platform} is not connected`);
@@ -375,9 +385,9 @@ export const fetchPostAnalytics = action({
       credentials.accessToken,
     );
 
-    await ctx.runMutation(api.analytics.recordAnalytics, {
+    await ctx.runMutation(internal.analytics.recordAnalytics, {
       postId: args.postId,
-      userId: args.userId,
+      userId: identity.subject,
       platform: post.platform,
       likes,
       comments,
@@ -385,7 +395,7 @@ export const fetchPostAnalytics = action({
       reach,
       impressions,
     });
-    await ctx.runMutation(api.posts.markAnalyticsCollected, { postId: args.postId });
+    await ctx.runMutation(internal.posts.markAnalyticsCollected, { postId: args.postId });
 
     return { success: true, likes, comments, shares, reach, impressions };
   },
@@ -441,7 +451,7 @@ function normalizeUrl(url: string) {
 }
 
 async function findOwnPostByUrl(ctx: ActionCtx, userId: string, targetUrl: string) {
-  const posts = await ctx.runQuery(api.posts.getPostsForUser, { userId });
+  const posts = await ctx.runQuery(internal.posts.getPostsForUserInternal, { userId });
   const normalizedTarget = normalizeUrl(targetUrl);
   return {
     match: posts.find((post) => post.postUrl && normalizeUrl(post.postUrl) === normalizedTarget) ?? null,
@@ -449,10 +459,16 @@ async function findOwnPostByUrl(ctx: ActionCtx, userId: string, targetUrl: strin
   };
 }
 
+// Identity is derived from the caller's own session, never trusted from an
+// argument — otherwise anyone signed in could post a comment through
+// another teammate's connected Meta account.
 export const publishCommentOnUrl = action({
-  args: { userId: v.string(), targetUrl: v.string(), content: v.string() },
+  args: { targetUrl: v.string(), content: v.string() },
   handler: async (ctx, args): Promise<{ commentId: string }> => {
-    const { match: post, knownUrls } = await findOwnPostByUrl(ctx, args.userId, args.targetUrl);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const { match: post, knownUrls } = await findOwnPostByUrl(ctx, identity.subject, args.targetUrl);
     if (!post || !post.platformPostId) {
       throw new Error(
         `This URL doesn't match one of your published posts. Commenting is only supported on posts published through this workspace.\nReceived: "${args.targetUrl}"\nKnown post URLs for this account: ${
@@ -462,7 +478,7 @@ export const publishCommentOnUrl = action({
     }
 
     const credentials = await ctx.runQuery(internal.socialAccounts.getMetaCredentials, {
-      userId: args.userId,
+      userId: identity.subject,
       platform: post.platform === "Instagram" ? "Instagram" : "Facebook",
     });
     if (!credentials) throw new Error(`${post.platform} is not connected`);
@@ -478,9 +494,9 @@ export const publishCommentOnUrl = action({
 export const processDueComments = internalAction({
   args: {},
   handler: async (ctx) => {
-    const dueComments = await ctx.runQuery(api.comments.getScheduledComments, {});
+    const dueComments = await ctx.runQuery(internal.comments.getScheduledComments, {});
     for (const comment of dueComments) {
-      await ctx.runMutation(api.comments.markCommentProcessing, { commentId: comment._id });
+      await ctx.runMutation(internal.comments.markCommentProcessing, { commentId: comment._id });
       try {
         const { match: post } = await findOwnPostByUrl(ctx, comment.userId, comment.targetUrl);
         if (!post || !post.platformPostId) {
@@ -496,9 +512,9 @@ export const processDueComments = internalAction({
           message: comment.content,
           access_token: credentials.accessToken,
         });
-        await ctx.runMutation(api.comments.markCommentPublished, { commentId: comment._id });
+        await ctx.runMutation(internal.comments.markCommentPublished, { commentId: comment._id });
       } catch (error) {
-        await ctx.runMutation(api.comments.markCommentFailed, {
+        await ctx.runMutation(internal.comments.markCommentFailed, {
           commentId: comment._id,
           error: error instanceof Error ? error.message : "Failed to publish comment",
         });
@@ -529,12 +545,14 @@ export type DebugConnectionResult =
 
 export const debugConnection = action({
   args: {
-    userId: v.string(),
     platform: v.union(v.literal("Facebook"), v.literal("Instagram")),
   },
   handler: async (ctx, args): Promise<DebugConnectionResult> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     const credentials = await ctx.runQuery(internal.socialAccounts.getMetaCredentials, {
-      userId: args.userId,
+      userId: identity.subject,
       platform: args.platform,
     });
     if (!credentials) return { connected: false };
@@ -575,13 +593,19 @@ export const debugConnection = action({
 });
 
 export const fetchPostComments = action({
-  args: { userId: v.string(), postId: v.id("posts") },
+  args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     const post = await ctx.runQuery(api.posts.getPost, { postId: args.postId });
     if (!post || !post.platformPostId) throw new Error("Post has not been published yet");
+    if (post.userId !== identity.subject) {
+      throw new Error("You can only fetch comments for your own posts");
+    }
 
     const credentials = await ctx.runQuery(internal.socialAccounts.getMetaCredentials, {
-      userId: args.userId,
+      userId: identity.subject,
       platform: post.platform === "Instagram" ? "Instagram" : "Facebook",
     });
     if (!credentials) throw new Error(`${post.platform} is not connected`);
