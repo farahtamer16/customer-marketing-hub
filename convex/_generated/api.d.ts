@@ -21,6 +21,7 @@ import type * as growth from "../growth.js";
 import type * as journey from "../journey.js";
 import type * as meta from "../meta.js";
 import type * as notifications from "../notifications.js";
+import type * as outreach from "../outreach.js";
 import type * as posts from "../posts.js";
 import type * as seed from "../seed.js";
 import type * as socialAccounts from "../socialAccounts.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   journey: typeof journey;
   meta: typeof meta;
   notifications: typeof notifications;
+  outreach: typeof outreach;
   posts: typeof posts;
   seed: typeof seed;
   socialAccounts: typeof socialAccounts;

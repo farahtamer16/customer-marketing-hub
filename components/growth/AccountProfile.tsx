@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { GrowthAccount } from "@/types/growth";
 import { journeyStages } from "@/lib/growth-data";
 import {
@@ -43,6 +44,10 @@ export default function AccountProfile({
   // A real benchmark, not a guess: what accounts of this tier actually
   // turned into once they closed.
   const estimate = useQuery(api.growth.estimateOutcomes, { tier: account.tier });
+  const outreachHistory = useQuery(api.outreach.listForAccount, {
+    accountId: account.id as Id<"growthAccounts">,
+  });
+  const lastOutreach = outreachHistory?.[0];
 
   return (
     <div className="space-y-6">
@@ -272,6 +277,14 @@ export default function AccountProfile({
                 <Wand2 size={15} /> {t("outreach.openButton")}
               </button>
             </div>
+            {lastOutreach && (
+              <p className="mt-3 text-xs text-blue-100">
+                {t("accountDetail.lastContacted", {
+                  email: lastOutreach.toEmail,
+                  date: format.dateTime(lastOutreach.sentAt, { dateStyle: "medium" }),
+                })}
+              </p>
+            )}
           </article>
 
           <article className="glass-card rounded-3xl p-6">

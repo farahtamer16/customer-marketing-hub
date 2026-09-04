@@ -404,6 +404,21 @@ export default defineSchema({
   // time from real published-post counts once a visitor links to a real
   // Clerk user, same as everything else in this app that's computed
   // rather than hand-set.
+  // A real, sent record of every personalized outreach email — created only
+  // after Resend confirms the send. Lets the account profile show real
+  // "last contacted" history instead of the draft dialog being a dead end
+  // with no trace of what actually went out.
+  outreachEmails: defineTable({
+    accountId: v.id("growthAccounts"),
+    memberId: v.string(),
+    toEmail: v.string(),
+    subject: v.string(),
+    body: v.string(),
+    sentBy: v.string(),
+    sentAt: v.number(),
+    resendId: v.optional(v.string()),
+  }).index("by_accountId", ["accountId"]),
+
   consumerVisitors: defineTable({
     visitorId: v.string(),
     firstSeenAt: v.number(),
