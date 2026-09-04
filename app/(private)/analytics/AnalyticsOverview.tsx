@@ -14,6 +14,8 @@ import { useQuery } from "convex/react";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
+import BestPostingTimes from "@/components/analytics/BestPostingTimes";
+import PlatformComparison from "@/components/analytics/PlatformComparison";
 import Chart from "./Chart";
 import PostAnalytics from "./PostAnalytics";
 import { useFormatter, useTranslations } from "next-intl";
@@ -157,6 +159,10 @@ function AnalyticsContent({
             <p className="mt-1 text-sm text-slate-500">{label}</p>
           </article>
         ))}
+      </section>
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+        <BestPostingTimes />
+        <PlatformComparison />
       </section>
       <Chart rows={rows} />
       <PostAnalytics rows={rows} />

@@ -327,7 +327,55 @@
     "refreshComments": "Refresh Comments",
     "noCommentsFetched": "No comments fetched yet.",
     "fetchCommentsHint": "Click 'Fetch Comments' to scrape and classify comments from the platform.",
-    "commentsReady": "{count} comments fetched, classified, and added below."
+    "commentsReady": "{count} comments fetched, classified, and added below.",
+    "trendTitle": "Trend over time",
+    "trendHint": "Every refresh is kept, not just the latest — this is that real history.",
+    "trendMetric": {
+      "reach": "Reach",
+      "impressions": "Impressions",
+      "engagement": "Engagement"
+    },
+    "trendNoData": "Refresh analytics at least twice, at different times, to see a real trend here.",
+    "commentBreakdownTitle": "What this post drove",
+    "commentBreakdownHint": "Real comment classifications for this post, not just a like/comment count.",
+    "commentBreakdownNoData": "No classified comments on this post yet.",
+    "commentCategory": {
+      "Lead": "Leads",
+      "Question": "Questions",
+      "Complaint": "Complaints",
+      "Feedback": "Feedback",
+      "Engagement": "Engagement",
+      "Other": "Other"
+    },
+    "insightTitle": "Why this post performed this way",
+    "insightHint": "Generated from this post's real numbers — grounded, not guessed.",
+    "insightGenerate": "Generate insight",
+    "insightGenerating": "Generating…",
+    "insightRegenerate": "Regenerate",
+    "insightFailed": "Failed to generate insight",
+    "bestTimes": {
+      "title": "Best day to post",
+      "hint": "Real average engagement rate by day of week, from your own published posts.",
+      "notReady": "Not enough published posts with analytics yet — publish and refresh a few more to see a real pattern.",
+      "notEnoughPerDay": "Not enough posts on any single day yet to call out a best one — check back as you publish more.",
+      "bestDay": "{day} performs best",
+      "bestDayHint": "{rate} average engagement rate across {count, plural, =1 {1 post} other {# posts}}.",
+      "dayNames": {
+        "sun": "Sunday",
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday"
+      }
+    },
+    "platformComparison": {
+      "title": "Platform comparison",
+      "hint": "Real average engagement rate per platform, from your own published posts.",
+      "empty": "No published posts with analytics yet.",
+      "postsCount": "{count, plural, =1 {1 post} other {# posts}}"
+    }
   },
   "tasks": {
     "eyebrow": "Follow-up",

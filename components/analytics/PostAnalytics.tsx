@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useQuery } from "convex/react";
 import {
   BarChart3,
   Clock3,
@@ -13,16 +15,28 @@ import {
   TrendingUp,
   TriangleAlert,
   Users,
+  Wand2,
 } from "lucide-react";
+import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { usePostAnalytics } from "@/hooks/usePostAnalytics";
 import { PostComments } from "./PostComments";
+import AnalyticsTrendChart from "./AnalyticsTrendChart";
 import { useFormatter, useTranslations } from "next-intl";
 
 interface PostAnalyticsProps {
   postId: Id<"posts">;
   userId: string;
 }
+
+const COMMENT_CATEGORY_TONE: Record<string, string> = {
+  Lead: "bg-emerald-50 text-emerald-700",
+  Question: "bg-blue-50 text-blue-700",
+  Complaint: "bg-rose-50 text-rose-700",
+  Feedback: "bg-violet-50 text-violet-700",
+  Engagement: "bg-cyan-50 text-cyan-700",
+  Other: "bg-slate-100 text-slate-600",
+};
 
 export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
   const t = useTranslations("analytics");
@@ -37,6 +51,47 @@ export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
     canRefresh,
     cooldownRemaining,
   } = usePostAnalytics(postId, userId);
+  const history = useQuery(api.analytics.getHistoryForPost, { postId });
+  const commentBreakdown = useQuery(api.analytics.getCommentBreakdownForPost, { postId });
+  const post = useQuery(api.posts.getPost, { postId });
+  const [insight, setInsight] = useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+
+  const generateInsight = async () => {
+    if (!analytics || !post) return;
+    setInsightLoading(true);
+    setInsightError(null);
+    try {
+      const response = await fetch("/api/ai/post-insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: post.content,
+          platform: post.platform,
+          likes: analytics.likes,
+          comments: analytics.comments,
+          shares: analytics.shares,
+          reach: analytics.reach,
+          impressions: analytics.impressions,
+          engagementRate:
+            analytics.reach && analytics.reach > 0
+              ? (analytics.likes + analytics.comments + (analytics.shares ?? 0)) / analytics.reach
+              : null,
+          commentBreakdown,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || t("insightFailed"));
+      }
+      setInsight(data.insight);
+    } catch (err) {
+      setInsightError(err instanceof Error ? err.message : t("insightFailed"));
+    } finally {
+      setInsightLoading(false);
+    }
+  };
 
   if (isInitialLoading) {
     return (
@@ -193,6 +248,64 @@ export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
               </span>
             )}
           </div>
+
+          {commentBreakdown && (
+            <article className="glass-card rounded-3xl p-6">
+              <h2 className="font-semibold text-[#071e55]">{t("commentBreakdownTitle")}</h2>
+              <p className="mt-1 text-xs text-slate-500">{t("commentBreakdownHint")}</p>
+              {Object.values(commentBreakdown).every((count) => count === 0) ? (
+                <p className="mt-4 text-sm text-slate-400">{t("commentBreakdownNoData")}</p>
+              ) : (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(
+                    Object.entries(commentBreakdown) as [
+                      keyof typeof commentBreakdown,
+                      number,
+                    ][]
+                  )
+                    .filter(([, count]) => count > 0)
+                    .map(([category, count]) => (
+                      <span
+                        key={category}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${COMMENT_CATEGORY_TONE[category] ?? "bg-slate-100 text-slate-600"}`}
+                      >
+                        {t(`commentCategory.${category}`)}: {count}
+                      </span>
+                    ))}
+                </div>
+              )}
+            </article>
+          )}
+
+          <AnalyticsTrendChart history={history ?? []} />
+
+          <article className="glass-card rounded-3xl p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-[#071e55]">{t("insightTitle")}</h2>
+                <p className="mt-1 text-xs text-slate-500">{t("insightHint")}</p>
+              </div>
+              <button
+                type="button"
+                onClick={generateInsight}
+                disabled={insightLoading || !post}
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Wand2 size={14} />
+                {insightLoading ? t("insightGenerating") : insight ? t("insightRegenerate") : t("insightGenerate")}
+              </button>
+            </div>
+            {insightError && (
+              <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {insightError}
+              </p>
+            )}
+            {insight && (
+              <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+                {insight}
+              </p>
+            )}
+          </article>
         </>
       )}
 

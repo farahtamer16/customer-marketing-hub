@@ -1,6 +1,8 @@
 // convex/analytics.ts
 import { query, internalMutation } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 // ── Get the most recent analytics entry for a post ─────────────────
 export const getLatestForPost = query({
@@ -134,7 +136,43 @@ export const getOverview = query({
   },
 });
 
+const COMMENT_CATEGORIES = [
+  "Lead",
+  "Question",
+  "Complaint",
+  "Feedback",
+  "Engagement",
+  "Other",
+] as const;
+
+async function commentBreakdownForPost(ctx: QueryCtx, postId: Id<"posts">) {
+  const comments = await ctx.db
+    .query("comments")
+    .withIndex("by_postId", (q) => q.eq("postId", postId))
+    .collect();
+  const breakdown = Object.fromEntries(
+    COMMENT_CATEGORIES.map((category) => [category, 0]),
+  ) as Record<(typeof COMMENT_CATEGORIES)[number], number>;
+  for (const comment of comments) {
+    if ((COMMENT_CATEGORIES as readonly string[]).includes(comment.classification)) {
+      breakdown[comment.classification as (typeof COMMENT_CATEGORIES)[number]] += 1;
+    } else {
+      breakdown.Other += 1;
+    }
+  }
+  return breakdown;
+}
+
+function engagementRateFor(entry: { likes: number; comments: number; shares?: number; reach?: number }) {
+  if (!entry.reach || entry.reach <= 0) return null;
+  return (entry.likes + entry.comments + (entry.shares ?? 0)) / entry.reach;
+}
+
 // ── Get all posts with their latest analytics (for list view) ────
+// Each row also carries a real comment-classification breakdown — what a
+// post actually drove (leads, questions, complaints...), not just likes —
+// computed live from the same Gemini-classified comments already stored,
+// never a separate/fabricated number.
 export const getPostsWithAnalytics = query({
   args: {
     platform: v.optional(v.string()),
@@ -162,12 +200,160 @@ export const getPostsWithAnalytics = query({
         .withIndex("by_postId", (q) => q.eq("postId", post._id))
         .order("desc")
         .first();
-      result.push({ post, analytics: latest || null });
+      const commentBreakdown = await commentBreakdownForPost(ctx, post._id);
+      result.push({
+        post,
+        analytics: latest || null,
+        commentBreakdown,
+        engagementRate: latest ? engagementRateFor(latest) : null,
+      });
     }
 
     // Sort by publishedAt descending (newest first)
     result.sort((a, b) => (b.post.publishedAt || 0) - (a.post.publishedAt || 0));
 
     return { data: result, count: result.length };
+  },
+});
+
+// ── Real time-series of a post's analytics snapshots, not just the latest
+// — every refresh already inserts a new row (recordAnalytics), this just
+// surfaces that history instead of discarding it.
+export const getHistoryForPost = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("analytics")
+      .withIndex("by_postId", (q) => q.eq("postId", args.postId))
+      .order("asc")
+      .collect();
+  },
+});
+
+// Single-post version of the breakdown embedded in getPostsWithAnalytics —
+// for the post detail page, which doesn't fetch the whole list.
+export const getCommentBreakdownForPost = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    return await commentBreakdownForPost(ctx, args.postId);
+  },
+});
+
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+// Below this many total published-with-analytics posts, any "best day"
+// pattern is noise, not signal — say so honestly instead of guessing.
+const MIN_TOTAL_FOR_PATTERN = 3;
+// A single lucky post shouldn't crown a whole day as "best" — require a
+// couple of data points in that specific day before it's eligible.
+const MIN_POSTS_PER_DAY = 2;
+
+// ── Real best-day-to-post pattern, from this account's own published
+// posts and their actual engagement rate — never a guess, and explicitly
+// "not enough data yet" below a real sample-size floor.
+export const getBestPostingTimes = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.eq(q.field("status"), "Published"))
+      .collect();
+
+    const buckets = DAY_KEYS.map(() => ({ posts: 0, rateSum: 0, withRate: 0 }));
+    let totalWithData = 0;
+
+    for (const post of posts) {
+      if (!post.publishedAt) continue;
+      const latest = await ctx.db
+        .query("analytics")
+        .withIndex("by_postId", (q) => q.eq("postId", post._id))
+        .order("desc")
+        .first();
+      if (!latest) continue;
+      totalWithData += 1;
+      const bucket = buckets[new Date(post.publishedAt).getDay()];
+      bucket.posts += 1;
+      const rate = engagementRateFor(latest);
+      if (rate !== null) {
+        bucket.rateSum += rate;
+        bucket.withRate += 1;
+      }
+    }
+
+    if (totalWithData < MIN_TOTAL_FOR_PATTERN) {
+      return { ready: false as const, totalWithData };
+    }
+
+    const days = DAY_KEYS.map((day, index) => ({
+      day,
+      posts: buckets[index].posts,
+      avgEngagementRate:
+        buckets[index].withRate > 0 ? buckets[index].rateSum / buckets[index].withRate : null,
+    }));
+
+    const eligible = days.filter(
+      (d) => d.posts >= MIN_POSTS_PER_DAY && d.avgEngagementRate !== null,
+    );
+    const best =
+      eligible.length > 0
+        ? eligible.reduce((a, b) => (b.avgEngagementRate! > a.avgEngagementRate! ? b : a))
+        : null;
+
+    return { ready: true as const, totalWithData, days, best };
+  },
+});
+
+// ── Real per-platform comparison (Instagram vs Facebook, etc.) from this
+// account's own published posts.
+export const getPlatformComparison = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.eq(q.field("status"), "Published"))
+      .collect();
+
+    const byPlatform = new Map<
+      string,
+      { posts: number; rateSum: number; withRate: number; totalReach: number; totalImpressions: number }
+    >();
+
+    for (const post of posts) {
+      const latest = await ctx.db
+        .query("analytics")
+        .withIndex("by_postId", (q) => q.eq("postId", post._id))
+        .order("desc")
+        .first();
+      if (!latest) continue;
+      const entry = byPlatform.get(post.platform) ?? {
+        posts: 0,
+        rateSum: 0,
+        withRate: 0,
+        totalReach: 0,
+        totalImpressions: 0,
+      };
+      entry.posts += 1;
+      entry.totalReach += latest.reach ?? 0;
+      entry.totalImpressions += latest.impressions ?? 0;
+      const rate = engagementRateFor(latest);
+      if (rate !== null) {
+        entry.rateSum += rate;
+        entry.withRate += 1;
+      }
+      byPlatform.set(post.platform, entry);
+    }
+
+    return Array.from(byPlatform.entries()).map(([platform, entry]) => ({
+      platform,
+      posts: entry.posts,
+      avgEngagementRate: entry.withRate > 0 ? entry.rateSum / entry.withRate : null,
+      totalReach: entry.totalReach,
+      totalImpressions: entry.totalImpressions,
+    }));
   },
 });
