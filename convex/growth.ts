@@ -3,7 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./authz";
-import { computeAccountScores, computeMemberScore } from "./scoring";
+import { computeAccountScores, computeMemberScore, computeScoreBreakdown } from "./scoring";
 
 // A lead's score is never client-supplied — it's this account's real
 // intent score, scaled by how much that buying role typically influences
@@ -80,6 +80,19 @@ export const getAccount = query({
     await requirePermission(ctx, "viewExecutiveAnalytics");
     const account = await ctx.db.get(args.accountId);
     return account ? toAccount(account) : null;
+  },
+});
+
+// Real explanation of why an account's scores are what they are — every
+// signal that contributed, computed live from the account's actual data,
+// not a stored/stale summary.
+export const getScoreBreakdown = query({
+  args: { accountId: v.id("growthAccounts") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "viewExecutiveAnalytics");
+    const account = await ctx.db.get(args.accountId);
+    if (!account) return null;
+    return computeScoreBreakdown({ members: account.members, signals: account.signals });
   },
 });
 

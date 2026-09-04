@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Lightbulb,
+  ListTree,
   Mail,
   Scale,
   UsersRound,
@@ -31,6 +32,7 @@ import {
 } from "./GrowthPrimitives";
 import LogSignalDialog from "./LogSignalDialog";
 import PersonalizeOutreachDialog from "./PersonalizeOutreachDialog";
+import ScoreBreakdownDialog from "./ScoreBreakdownDialog";
 
 export default function AccountProfile({
   account,
@@ -41,6 +43,7 @@ export default function AccountProfile({
   const format = useFormatter();
   const [logSignalOpen, setLogSignalOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   // A real benchmark, not a guess: what accounts of this tier actually
   // turned into once they closed.
   const estimate = useQuery(api.growth.estimateOutcomes, { tier: account.tier });
@@ -105,6 +108,13 @@ export default function AccountProfile({
               value={account.buyingGroupCoverage}
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setBreakdownOpen(true)}
+            className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#2854dc] hover:text-[#173b9a]"
+          >
+            <ListTree size={13} /> {t("scoreBreakdown.openButton")}
+          </button>
         </div>
       </section>
 
@@ -341,6 +351,11 @@ export default function AccountProfile({
         open={outreachOpen}
         onClose={() => setOutreachOpen(false)}
         account={account}
+      />
+      <ScoreBreakdownDialog
+        open={breakdownOpen}
+        onClose={() => setBreakdownOpen(false)}
+        accountId={account.id}
       />
     </div>
   );

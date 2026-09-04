@@ -543,6 +543,17 @@
       "adoption": "Adoption score",
       "coverage": "Buying-group coverage"
     },
+    "scoreBreakdown": {
+      "openButton": "Why these scores?",
+      "title": "Score breakdown",
+      "description": "Every real signal behind these scores, and how much recency decayed each one — not just the number.",
+      "loading": "Loading…",
+      "recencyFactor": "{factor}% weight remaining",
+      "decisionMakers": "{count, plural, =1 {1 active decision-maker} other {# active decision-makers}}",
+      "coverage": "{active} of {total} buying-group members active",
+      "noData": "No contributing signals yet.",
+      "noAdoptionData": "No product-usage signals logged yet."
+    },
     "signals": {
       "pricingVisit": "Visited the pricing or enterprise page",
       "socialQuestion": "Asked a product question on social media",
