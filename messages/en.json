@@ -968,6 +968,7 @@
       "workflow": "Approval workflow",
       "decision": "Review decision",
       "decisionHint": "This updates the approval record and records the action in the activity log below.",
+      "decisionResolved": "This post already has a final decision recorded below — there's nothing left awaiting review.",
       "approve": "Approve",
       "requestChanges": "Request changes",
       "reject": "Reject",

@@ -28,6 +28,10 @@ export default function ApprovalReview({ post }: { post: ApprovalPost }) {
   const [submitting, setSubmitting] = useState(false);
   const status = post.status;
   const history = post.history;
+  // decide() throws once no step is left "current" (post already approved,
+  // rejected, or published) — hide the decision controls in that state
+  // instead of letting the user click a button that can only fail.
+  const hasCurrentStep = post.steps.some((step) => step.status === "current");
 
   const applyDecision = async () => {
     if (!decision || submitting) return;
@@ -116,64 +120,72 @@ export default function ApprovalReview({ post }: { post: ApprovalPost }) {
             <h2 className="font-semibold text-[#071e55]">
               {t("approvalReview.decision")}
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              {t("approvalReview.decisionHint")}
-            </p>
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              <button
-                type="button"
-                onClick={() => setDecision("approve")}
-                className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${decision === "approve" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700"}`}
-              >
-                {t("approvalReview.approve")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDecision("changes")}
-                className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${decision === "changes" ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-700"}`}
-              >
-                {t("approvalReview.requestChanges")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDecision("reject")}
-                className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${decision === "reject" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700"}`}
-              >
-                {t("approvalReview.reject")}
-              </button>
-            </div>
-            {decision && (
-              <div className="mt-4">
-                <label className="text-sm font-semibold text-slate-700">
-                  {t("approvalReview.note")}
-                  <textarea
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder={t("approvalReview.notePlaceholder")}
-                    className="mt-2 min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                  />
-                </label>
-                <div className="mt-3 flex justify-end gap-2">
+            {hasCurrentStep ? (
+              <>
+                <p className="mt-1 text-xs text-slate-500">
+                  {t("approvalReview.decisionHint")}
+                </p>
+                <div className="mt-5 grid gap-2 sm:grid-cols-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setDecision(null);
-                      setNote("");
-                    }}
-                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500"
+                    onClick={() => setDecision("approve")}
+                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${decision === "approve" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700"}`}
                   >
-                    {t("approvalReview.cancel")}
+                    {t("approvalReview.approve")}
                   </button>
                   <button
                     type="button"
-                    onClick={applyDecision}
-                    disabled={submitting}
-                    className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    onClick={() => setDecision("changes")}
+                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${decision === "changes" ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-700"}`}
                   >
-                    {t("approvalReview.confirm")}
+                    {t("approvalReview.requestChanges")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDecision("reject")}
+                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${decision === "reject" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700"}`}
+                  >
+                    {t("approvalReview.reject")}
                   </button>
                 </div>
-              </div>
+                {decision && (
+                  <div className="mt-4">
+                    <label className="text-sm font-semibold text-slate-700">
+                      {t("approvalReview.note")}
+                      <textarea
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        placeholder={t("approvalReview.notePlaceholder")}
+                        className="mt-2 min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                      />
+                    </label>
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDecision(null);
+                          setNote("");
+                        }}
+                        className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500"
+                      >
+                        {t("approvalReview.cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={applyDecision}
+                        disabled={submitting}
+                        className="rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {t("approvalReview.confirm")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                {t("approvalReview.decisionResolved")}
+              </p>
             )}
           </article>
         </div>
