@@ -46,6 +46,7 @@ export const recordPublishedPost = internalMutation({
       await ctx.runMutation(internal.growth.logProductSignal, {
         email: publisher.email,
         kind: "postCreated",
+        postId: id,
       });
     }
 
@@ -193,6 +194,7 @@ export const markItemPublished = internalMutation({
         await ctx.runMutation(internal.growth.logProductSignal, {
           email: publisher.email,
           kind: "postCreated",
+          postId: args.postId,
         });
       }
     }

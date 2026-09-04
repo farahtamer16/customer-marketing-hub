@@ -244,9 +244,9 @@ export default function AccountProfile({
                       })}
                     </p>
                   </div>
-                  {signal.source === "social" && (
+                  {signal.postId && (
                     <Link
-                      href="/posts"
+                      href={`/posts/${signal.postId}`}
                       className="inline-flex items-center gap-1 text-xs font-bold text-[#2854dc]"
                     >
                       {t("accountDetail.viewSocial")} <ArrowUpRight size={13} />

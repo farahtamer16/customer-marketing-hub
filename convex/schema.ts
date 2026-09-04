@@ -104,6 +104,12 @@ export default defineSchema({
     ),
     error: v.optional(v.string()),
     createdAt: v.number(),
+    // Set when logSocialSignalForCommenter matches this commenter's name to
+    // a tracked growth account's buying-group member — denormalized here
+    // (not just on the account's signal) so the social side of the app can
+    // show "this is a known CRM contact" right where comments are reviewed.
+    matchedAccountId: v.optional(v.id("growthAccounts")),
+    matchedAccountName: v.optional(v.string()),
   })
     .index("by_userId", ["userId"])
     .index("by_status_scheduled", ["status", "scheduledAt"])

@@ -26,7 +26,7 @@ export const storeComments = mutation({
     if (!identity) throw new Error("Not authenticated");
 
     for (const c of args.comments) {
-      await ctx.db.insert("comments", {
+      const commentId = await ctx.db.insert("comments", {
         userId: identity.subject,
         targetUrl: "",
         postId: c.postId,
@@ -40,11 +40,20 @@ export const storeComments = mutation({
 
       // Best-effort: a Lead/Question comment from someone whose name
       // matches a tracked account's buying-group member is real intent.
-      await ctx.runMutation(internal.growth.logSocialSignalForCommenter, {
+      const match = await ctx.runMutation(internal.growth.logSocialSignalForCommenter, {
         authorName: c.authorName,
         classification: c.classification,
         content: c.content,
+        postId: c.postId,
       });
+      // Denormalized onto the comment so the social side (Comments page)
+      // can show "known CRM contact" without a second lookup.
+      if (match) {
+        await ctx.db.patch(commentId, {
+          matchedAccountId: match.accountId,
+          matchedAccountName: match.accountName,
+        });
+      }
     }
   },
 });

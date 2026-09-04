@@ -242,6 +242,7 @@
     "emptyDescription": "Stored comments will appear here after they are posted or imported.",
     "sourcePost": "Source post",
     "author": "Author",
+    "knownAccount": "Known contact at {name}",
     "comment": "Comment",
     "classification": "Classification",
     "suggestedPriority": "Suggested priority",

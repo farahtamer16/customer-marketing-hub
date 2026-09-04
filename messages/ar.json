@@ -242,6 +242,7 @@
     "emptyDescription": "ستظهر التعليقات المحفوظة هنا بعد نشرها أو استيرادها.",
     "sourcePost": "المنشور المصدر",
     "author": "الكاتب",
+    "knownAccount": "جهة اتصال معروفة لدى {name}",
     "comment": "التعليق",
     "classification": "التصنيف",
     "suggestedPriority": "الأولوية المقترحة",

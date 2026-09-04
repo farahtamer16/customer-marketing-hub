@@ -373,6 +373,7 @@ export const logProductSignal = internalMutation({
   args: {
     email: v.string(),
     kind: v.union(v.literal("postCreated"), v.literal("productLogin")),
+    postId: v.optional(v.id("posts")),
   },
   handler: async (ctx, args) => {
     const domain = args.email.split("@")[1]?.toLowerCase().trim();
@@ -406,6 +407,7 @@ export const logProductSignal = internalMutation({
         source: "product",
         kind: args.kind,
         occurredAt: now,
+        postId: args.postId,
       });
     }
   },
@@ -423,11 +425,12 @@ export const logSocialSignalForCommenter = internalMutation({
     authorName: v.string(),
     classification: v.string(),
     content: v.string(),
+    postId: v.optional(v.id("posts")),
   },
   handler: async (ctx, args) => {
-    if (args.classification !== "Lead" && args.classification !== "Question") return;
+    if (args.classification !== "Lead" && args.classification !== "Question") return null;
     const name = args.authorName.trim().toLowerCase();
-    if (!name) return;
+    if (!name) return null;
 
     const accounts = await ctx.db.query("growthAccounts").collect();
     const matches = accounts.filter((account) =>
@@ -436,7 +439,7 @@ export const logSocialSignalForCommenter = internalMutation({
           member.status !== "missing" && member.name.trim().toLowerCase() === name,
       ),
     );
-    if (matches.length === 0) return;
+    if (matches.length === 0) return null;
 
     const now = Date.now();
     for (const account of matches) {
@@ -446,7 +449,14 @@ export const logSocialSignalForCommenter = internalMutation({
         kind: "socialQuestion",
         occurredAt: now,
         detail: args.content.slice(0, 140),
+        postId: args.postId,
       });
     }
+
+    // First match, for storeComments to denormalize onto the comment
+    // itself — so a comment can show "this is a known contact at X" right
+    // where the social side actually looks, not just buried in the
+    // account's own signal timeline.
+    return { accountId: matches[0]._id, accountName: matches[0].name };
   },
 });

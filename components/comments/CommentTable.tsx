@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ExternalLink, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Trash2, UserCheck } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import StatusPill from "@/components/hub/StatusPill";
@@ -83,12 +84,23 @@ export default function CommentTable({
           header: t("author"),
           cell: ({ row }) => (
             <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-[#c4ffe6] to-[#7590ff] text-xs font-bold text-[#09276b]">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#c4ffe6] to-[#7590ff] text-xs font-bold text-[#09276b]">
                 {initials(row.original.authorName)}
               </span>
-              <span className="font-semibold text-[#071e55]">
-                {row.original.authorName}
-              </span>
+              <div className="min-w-0">
+                <span className="block font-semibold text-[#071e55]">
+                  {row.original.authorName}
+                </span>
+                {row.original.matchedAccountId && (
+                  <Link
+                    href={`/growth/accounts/${row.original.matchedAccountId}`}
+                    className="mt-0.5 inline-flex items-center gap-1 text-[0.65rem] font-bold text-emerald-700"
+                  >
+                    <UserCheck size={11} />
+                    {t("knownAccount", { name: row.original.matchedAccountName ?? "" })}
+                  </Link>
+                )}
+              </div>
             </div>
           ),
         }),
