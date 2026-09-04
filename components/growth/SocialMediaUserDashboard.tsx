@@ -1,13 +1,16 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import {
   CalendarClock,
   Flag,
   MessageCircleReply,
   MessagesSquare,
   Tags,
+  UserCog,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
 import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
 
 const capabilities = [
@@ -20,8 +23,26 @@ const capabilities = [
 
 export default function SocialMediaUserDashboard() {
   const t = useTranslations("growth.roleDashboards.social_media_user");
+  // Someone landing here as the default role has no way to know who can
+  // give them more access — this is that way.
+  const owner = useQuery(api.team.getWorkspaceOwner);
+
   return (
     <RoleDashboardShell role="social_media_user">
+      {owner && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-amber-900">
+          <UserCog className="mt-0.5 shrink-0" size={17} />
+          <div>
+            <p className="text-sm font-semibold">{t("roleUpgradeTitle")}</p>
+            <p className="mt-1 text-xs leading-5 text-amber-700">
+              {t("roleUpgradeDescription", {
+                name: owner.name,
+                email: owner.email || t("roleUpgradeNoEmail"),
+              })}
+            </p>
+          </div>
+        </div>
+      )}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {capabilities.map(({ key, icon, href }) => (
           <DashboardCard

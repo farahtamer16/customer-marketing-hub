@@ -80,16 +80,50 @@ export const ensureCurrentMember = mutation({
 
     const anyMember = await ctx.db.query("teamMembers").first();
     const role = anyMember ? "socialMediaUser" : "ownerAdmin";
+    const name = identity.name ?? email ?? "New member";
 
-    return await ctx.db.insert("teamMembers", {
+    const id = await ctx.db.insert("teamMembers", {
       clerkUserId: identity.subject,
-      name: identity.name ?? email ?? "New member",
+      name,
       email,
       role,
       status: "active",
       lastActive: Date.now(),
       createdAt: Date.now(),
     });
+
+    // The one person this silently, automatically happens to is the admin:
+    // without this, a new uninvited sign-in lands as socialMediaUser with
+    // no one told it happened, and no visible way for either side to know
+    // a role needs setting. A real notification instead of a dead end.
+    if (anyMember) {
+      await ctx.db.insert("workspaceNotifications", {
+        kind: "system",
+        title: "New member joined",
+        detail: `${name}${email ? ` (${email})` : ""} signed in and joined as Social Media User — review their role if that's not right.`,
+        occurredAt: Date.now(),
+        read: false,
+        href: "/growth/team",
+      });
+    }
+
+    return id;
+  },
+});
+
+// So a member without manageTeam permission still has a real way to get
+// unstuck: who to actually ask for a different role, instead of just
+// knowing the concept "an owner exists" with no way to find one.
+export const getWorkspaceOwner = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const owner = await ctx.db
+      .query("teamMembers")
+      .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
+      .first();
+    if (!owner) return null;
+    return { name: owner.name, email: owner.email };
   },
 });
 

@@ -724,6 +724,9 @@
         "description": "Manage daily social content and interactions across connected channels.",
         "accessLevel": "Social media user access",
         "accessDescription": "Tactical access for social conversations, content creation, scheduling, tagging, and intent flags.",
+        "roleUpgradeTitle": "Need a different role?",
+        "roleUpgradeDescription": "New members join as Social Media User by default. {name} ({email}) owns this workspace and can change your role in Team & Access.",
+        "roleUpgradeNoEmail": "no email on file",
         "capabilities": {
           "monitor": {
             "title": "Monitor comments and DMs",
