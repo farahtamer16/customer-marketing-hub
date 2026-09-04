@@ -3,6 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { requirePermission } from "./authz";
 
 // Called after fetching real comments via meta.fetchPostComments (which
 // already derived and verified the caller's identity), so every comment in
@@ -188,6 +189,19 @@ export const getCommentsForUser = query({
     return await ctx.db
       .query("comments")
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .collect();
+  },
+});
+
+// Admin visibility into a specific teammate's real comments — gated by
+// manageTeam, deliberately cross-user. Used by the member activity page.
+export const getCommentsForUserAdmin = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    return await ctx.db
+      .query("comments")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
   },
 });

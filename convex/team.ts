@@ -127,6 +127,27 @@ export const getWorkspaceOwner = query({
   },
 });
 
+// Resolves a teamMembers row into what the admin member-activity page
+// needs — gated the same as listMembers, since this is the same data for
+// one member instead of all of them.
+export const getMemberDetail = query({
+  args: { memberId: v.id("teamMembers") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    const member = await ctx.db.get(args.memberId);
+    if (!member) return null;
+    return {
+      id: member._id,
+      clerkUserId: member.clerkUserId ?? null,
+      name: member.name,
+      email: member.email,
+      role: member.role,
+      status: member.status,
+      lastActive: member.lastActive ?? null,
+    };
+  },
+});
+
 export const getMyRole = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -137,40 +158,6 @@ export const getMyRole = query({
       .unique();
     if (!member) return null;
     return dashboardRoleByWorkspaceRole[member.role];
-  },
-});
-
-export const inviteMember = mutation({
-  args: {
-    name: v.string(),
-    email: v.string(),
-    role: workspaceRole,
-  },
-  handler: async (ctx, args) => {
-    const actor = await requirePermission(ctx, "manageTeam");
-
-    const existing = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-    if (existing) throw new Error("A member with this email already exists");
-
-    const id = await ctx.db.insert("teamMembers", {
-      name: args.name,
-      email: args.email,
-      role: args.role,
-      status: "invited",
-      createdAt: Date.now(),
-    });
-
-    await ctx.db.insert("auditLog", {
-      actor: actor.name,
-      action: "memberInvited",
-      target: args.name,
-      occurredAt: Date.now(),
-    });
-
-    return id;
   },
 });
 

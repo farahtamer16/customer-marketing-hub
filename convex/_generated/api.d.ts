@@ -26,6 +26,7 @@ import type * as posts from "../posts.js";
 import type * as seed from "../seed.js";
 import type * as socialAccounts from "../socialAccounts.js";
 import type * as team from "../team.js";
+import type * as teams from "../teams.js";
 import type * as users from "../users.js";
 
 import type {
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   socialAccounts: typeof socialAccounts;
   team: typeof team;
+  teams: typeof teams;
   users: typeof users;
 }>;
 

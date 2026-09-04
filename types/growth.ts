@@ -132,6 +132,7 @@ export interface WorkspaceMember {
   role: WorkspaceRole;
   status: "active" | "invited" | "suspended";
   lastActive?: number;
+  teamId?: string | null;
 }
 
 export interface WorkspaceRoleDefinition {

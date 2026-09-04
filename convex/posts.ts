@@ -3,6 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { requirePermission } from "./authz";
 
 // Internal-only: only ever called from convex/meta.ts after it has already
 // derived the real publisher's identity server-side (never reachable from
@@ -112,6 +113,22 @@ export const getPostsForUser = query({
     return await ctx.db
       .query("posts")
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .order("desc")
+      .collect();
+  },
+});
+
+// Admin visibility into a specific teammate's real posts — gated by
+// manageTeam (not "own posts" identity-derivation), since this is
+// deliberately cross-user. Used by the member activity page so an admin
+// can see everything a given user actually published, not just totals.
+export const getPostsForUserAdmin = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    return await ctx.db
+      .query("posts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc")
       .collect();
   },

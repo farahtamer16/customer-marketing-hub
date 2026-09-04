@@ -152,9 +152,22 @@ export default defineSchema({
     ),
     lastActive: v.optional(v.number()),
     createdAt: v.number(),
+    // Which of an admin's teams this person belongs to. Optional so members
+    // created before multi-team support (or never assigned) just show up as
+    // ungrouped rather than requiring a backfill migration.
+    teamId: v.optional(v.id("teams")),
   })
     .index("by_clerkUserId", ["clerkUserId"])
-    .index("by_email", ["email"]),
+    .index("by_email", ["email"])
+    .index("by_teamId", ["teamId"]),
+
+  // A named group of teamMembers an admin can create, assign people to, and
+  // monitor on its own or alongside every other team.
+  teams: defineTable({
+    name: v.string(),
+    createdBy: v.string(),
+    createdAt: v.number(),
+  }),
 
   growthAccounts: defineTable({
     name: v.string(),
@@ -398,6 +411,8 @@ export default defineSchema({
       v.literal("approvalRuleChanged"),
       v.literal("postApproved"),
       v.literal("memberInvited"),
+      v.literal("teamCreated"),
+      v.literal("memberCreated"),
     ),
     target: v.string(),
     occurredAt: v.number(),
