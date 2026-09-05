@@ -24,30 +24,34 @@ export default function SidebarHeader() {
   const studio = useStudioMode();
   const teams = useQuery(api.teams.listTeamNames, isAdmin ? {} : "skip") ?? [];
   const items = role ? dashboardNavigation[role] : [];
-  const showGrowthNav = !isAdmin || studio.mode === "admin";
-  const showStudioNav = isAdmin && studio.mode === "content" && studio.teamId;
+  const inStudioMode = isAdmin && studio.mode === "content";
+  const showStudioNav = inStudioMode && studio.teamId;
   const contentItems = showStudioNav
     ? STUDIO_TABS.map((tabValue) => ({
         name: t(`studioTabs.${tabValue}`),
         href: `/growth/studio/${studio.teamId}/${tabValue}`,
         icon: navIcons[tabValue],
       }))
-    : items
-        .filter((item) => item.section === "content")
-        .map(({ label, href }) => ({
-          name: t(label),
-          href,
-          icon: navIcons[label],
-        }));
-  const growthItems = showGrowthNav
-    ? items
-        .filter((item) => item.section === "growth")
-        .map(({ label, href }) => ({
-          name: t(label),
-          href,
-          icon: navIcons[label],
-        }))
-    : [];
+    : inStudioMode
+      // Content Studio mode with no team chosen yet — the picker above
+      // handles that, so nothing to link to until one is selected.
+      ? []
+      : items
+          .filter((item) => item.section === "content")
+          .map(({ label, href }) => ({
+            name: t(label),
+            href,
+            icon: navIcons[label],
+          }));
+  // Growth Hub is always available regardless of mode — Content Studio is
+  // an additional view, not a replacement for it.
+  const growthItems = items
+    .filter((item) => item.section === "growth")
+    .map(({ label, href }) => ({
+      name: t(label),
+      href,
+      icon: navIcons[label],
+    }));
   const dropdownItems = [
     { name: t("newPost"), href: "/create/post", post: true },
     { name: t("addComment"), href: "/comments/post", post: false },
