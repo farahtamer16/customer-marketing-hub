@@ -801,7 +801,20 @@
       "notAvailable": "غير متاح",
       "engagementRate": "معدل التفاعل",
       "previousMonth": "الشهر السابق",
-      "nextMonth": "الشهر التالي"
+      "nextMonth": "الشهر التالي",
+      "schedulePost": "جدولة منشور",
+      "schedulePostHint": "ينشئ المنشور تحت حسابك المرتبط الخاص — لا يوجد حساب \"فريق\" مشترك للنشر من خلاله.",
+      "status": "الحالة",
+      "actionFailed": "فشل الإجراء",
+      "cancelPost": "إلغاء المنشور المجدول",
+      "cancelled": "تم الإلغاء",
+      "retryPost": "إعادة المحاولة",
+      "willRetry": "ستتم إعادة المحاولة خلال دقيقة",
+      "deletePost": "حذف المنشور",
+      "deletePostConfirm": "هل تريد حذف هذا المنشور؟ لا يمكن التراجع عن هذا.",
+      "deleted": "تم الحذف",
+      "deleteComment": "حذف التعليق",
+      "deleteCommentConfirm": "هل تريد حذف هذا التعليق؟ لا يمكن التراجع عن هذا."
     },
     "roleDashboards": {
       "accessDenied": {

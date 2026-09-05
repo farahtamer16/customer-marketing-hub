@@ -250,3 +250,13 @@ export const deleteComment = mutation({
     await ctx.db.delete(args.commentId);
   },
 });
+
+// Admin equivalent — gated by manageTeam instead of ownership, since this
+// acts on a team member's comment record from Content Studio.
+export const deleteCommentAdmin = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    await ctx.db.delete(args.commentId);
+  },
+});

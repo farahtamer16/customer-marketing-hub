@@ -801,7 +801,20 @@
       "notAvailable": "Not available",
       "engagementRate": "Engagement rate",
       "previousMonth": "Previous month",
-      "nextMonth": "Next month"
+      "nextMonth": "Next month",
+      "schedulePost": "Schedule post",
+      "schedulePostHint": "Creates the post under your own connected account — there's no shared \"team\" account to publish through.",
+      "status": "Status",
+      "actionFailed": "Action failed",
+      "cancelPost": "Cancel scheduled post",
+      "cancelled": "Cancelled",
+      "retryPost": "Retry post",
+      "willRetry": "Will retry in 1 minute",
+      "deletePost": "Delete post",
+      "deletePostConfirm": "Delete this post? This can't be undone.",
+      "deleted": "Deleted",
+      "deleteComment": "Delete comment",
+      "deleteCommentConfirm": "Delete this comment? This can't be undone."
     },
     "roleDashboards": {
       "accessDenied": {

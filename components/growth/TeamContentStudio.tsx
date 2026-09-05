@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -10,11 +10,16 @@ import {
   Eye,
   Heart,
   MessageCircleMore,
+  Plus,
+  RotateCcw,
   Share2,
+  Trash2,
   TrendingUp,
   Users,
+  XCircle,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { navIcons } from "@/lib/nav-icons";
@@ -82,37 +87,95 @@ export default function TeamContentStudio({
 function PostsTab({ teamId }: { teamId: Id<"teams"> }) {
   const t = useTranslations("growth.contentStudio");
   const posts = useQuery(api.analytics.getPostsWithAnalyticsForTeamAdmin, { teamId });
+  const cancelPost = useMutation(api.posts.cancelScheduledItemAdmin);
+  const retryPost = useMutation(api.posts.retryPostAdmin);
+  const deletePost = useMutation(api.posts.deletePostAdmin);
+
+  const run = async (action: () => Promise<unknown>, success: string) => {
+    try {
+      await action();
+      toast.success(success);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("actionFailed"));
+    }
+  };
 
   return (
     <section className="glass-card overflow-hidden rounded-3xl">
+      <div className="flex items-center justify-end border-b border-slate-100 px-6 py-4">
+        <Link
+          href="/create/post"
+          title={t("schedulePostHint")}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white"
+        >
+          <Plus size={16} />
+          {t("schedulePost")}
+        </Link>
+      </div>
       {!posts ? (
         <p className="px-6 py-8 text-center text-sm text-slate-500">{t("loading")}</p>
       ) : posts.data.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-slate-500">{t("postsEmpty")}</p>
       ) : (
         <div className="overflow-x-auto">
-          <div className="min-w-[860px]">
-            <div className="grid grid-cols-[2fr_1fr_repeat(5,1fr)] border-b border-slate-100 px-6 py-4 text-[0.62rem] font-bold uppercase tracking-[0.13em] text-slate-400">
+          <div className="min-w-[960px]">
+            <div className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center border-b border-slate-100 px-6 py-4 text-[0.62rem] font-bold uppercase tracking-[0.13em] text-slate-400">
               <span>{t("postColumn")}</span>
               <span>{t("platform")}</span>
+              <span>{t("status")}</span>
               <span>{t("likes")}</span>
               <span>{t("comments")}</span>
               <span>{t("shares")}</span>
               <span>{t("reach")}</span>
               <span>{t("impressions")}</span>
+              <span />
             </div>
             {posts.data.map(({ post, analytics }) => (
               <div
                 key={post._id}
-                className="grid grid-cols-[2fr_1fr_repeat(5,1fr)] px-6 py-4 text-sm text-slate-600 odd:bg-white/35"
+                className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center px-6 py-4 text-sm text-slate-600 odd:bg-white/35"
               >
                 <span className="truncate pr-5 font-semibold text-[#173b9a]">{post.content}</span>
                 <span className="text-xs text-slate-400">{post.platform}</span>
+                <span className="text-xs text-slate-400">{post.status}</span>
                 <span>{(analytics?.likes ?? 0).toLocaleString()}</span>
                 <span>{(analytics?.comments ?? 0).toLocaleString()}</span>
                 <span>{(analytics?.shares ?? 0).toLocaleString()}</span>
                 <span>{analytics?.reach !== undefined ? analytics.reach.toLocaleString() : "—"}</span>
                 <span>{analytics?.impressions !== undefined ? analytics.impressions.toLocaleString() : "—"}</span>
+                <span className="flex items-center gap-1 justify-self-end">
+                  {post.status === "Scheduled" && (
+                    <button
+                      type="button"
+                      title={t("cancelPost")}
+                      onClick={() => run(() => cancelPost({ postId: post._id }), t("cancelled"))}
+                      className="rounded-lg p-1.5 text-amber-600 hover:bg-amber-50"
+                    >
+                      <XCircle size={15} />
+                    </button>
+                  )}
+                  {post.status === "Failed" && (
+                    <button
+                      type="button"
+                      title={t("retryPost")}
+                      onClick={() => run(() => retryPost({ postId: post._id }), t("willRetry"))}
+                      className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50"
+                    >
+                      <RotateCcw size={15} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    title={t("deletePost")}
+                    onClick={() => {
+                      if (!window.confirm(t("deletePostConfirm"))) return;
+                      run(() => deletePost({ postId: post._id }), t("deleted"));
+                    }}
+                    className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </span>
               </div>
             ))}
           </div>
@@ -125,6 +188,7 @@ function PostsTab({ teamId }: { teamId: Id<"teams"> }) {
 function CommentsTab({ teamId }: { teamId: Id<"teams"> }) {
   const t = useTranslations("growth.contentStudio");
   const comments = useQuery(api.comments.getCommentsForTeamAdmin, { teamId });
+  const deleteComment = useMutation(api.comments.deleteCommentAdmin);
 
   return (
     <section className="glass-card overflow-hidden rounded-3xl">
@@ -143,6 +207,22 @@ function CommentsTab({ teamId }: { teamId: Id<"teams"> }) {
               <span className="shrink-0 rounded-full bg-slate-50 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-slate-500">
                 {comment.classification}
               </span>
+              <button
+                type="button"
+                title={t("deleteComment")}
+                onClick={async () => {
+                  if (!window.confirm(t("deleteCommentConfirm"))) return;
+                  try {
+                    await deleteComment({ commentId: comment._id });
+                    toast.success(t("deleted"));
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : t("actionFailed"));
+                  }
+                }}
+                className="shrink-0 rounded-lg p-1.5 text-rose-500 hover:bg-rose-50"
+              >
+                <Trash2 size={15} />
+              </button>
             </div>
           ))}
         </div>
@@ -244,7 +324,15 @@ function CalendarTab({ teamId }: { teamId: Id<"teams"> }) {
             {formatter.number(year, { useGrouping: false })}
           </h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/create/post"
+            title={t("schedulePostHint")}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#173b9a] px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            <Plus size={16} />
+            {t("schedulePost")}
+          </Link>
           <button
             type="button"
             aria-label={t("previousMonth")}

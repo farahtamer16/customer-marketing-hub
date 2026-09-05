@@ -307,6 +307,44 @@ export const retryPost = mutation({
   },
 });
 
+// Admin equivalents of the three mutations above — gated by manageTeam
+// instead of requireOwnPost, since these act on a team member's post, not
+// the caller's own. Used by Content Studio so an admin can actually
+// manage what they're looking at, not just view it.
+export const cancelScheduledItemAdmin = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    const item = await ctx.db.get(args.postId);
+    if (!item) throw new Error("Post not found");
+    if (item.status !== "Scheduled") throw new Error("Only scheduled posts can be cancelled");
+    await ctx.db.delete(args.postId);
+  },
+});
+
+export const deletePostAdmin = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    await ctx.db.delete(args.postId);
+  },
+});
+
+export const retryPostAdmin = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    const item = await ctx.db.get(args.postId);
+    if (!item) throw new Error("Post not found");
+    if (item.status !== "Failed") throw new Error("Only failed posts can be retried");
+    await ctx.db.patch(args.postId, {
+      status: "Scheduled",
+      scheduledAt: Date.now() + 60000,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 // Only ever called from meta.ts's publish pipeline.
 export const markItemProcessing = internalMutation({
   args: { postId: v.id("posts") },
