@@ -26,7 +26,7 @@ const EMPTY_LEADS: GrowthLead[] = [];
 export default function LeadDirectory() {
   const t = useTranslations("growth");
   const router = useRouter();
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const growthLeads = (useQuery(api.growth.listLeads) ??
     EMPTY_LEADS) as GrowthLead[];

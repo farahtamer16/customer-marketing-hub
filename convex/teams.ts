@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requirePermission } from "./authz";
+import { requireMember, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
   v.literal("ownerAdmin"),
@@ -33,6 +33,18 @@ export const createTeam = mutation({
   },
 });
 
+// Just id/name, for populating a "which team owns this" select — any real
+// workspace member can see the list of teams that exist (not who's in them
+// or their numbers), since assigning an account/campaign to a team isn't
+// itself a manageTeam action.
+export const listTeamNames = query({
+  handler: async (ctx) => {
+    await requireMember(ctx);
+    const teams = await ctx.db.query("teams").collect();
+    return teams.map((team) => ({ id: team._id, name: team.name }));
+  },
+});
+
 export const listTeams = query({
   handler: async (ctx) => {
     await requirePermission(ctx, "manageTeam");
@@ -44,6 +56,47 @@ export const listTeams = query({
       createdAt: team.createdAt,
       memberCount: members.filter((m) => m.teamId === team._id).length,
     }));
+  },
+});
+
+// Real per-team rollup of the accounts and campaigns actually assigned to
+// it — pipeline/LTV/spend/pipeline-from-campaigns computed from those real
+// records, the same "compute at read time" rule as every other rollup in
+// this app, not a stored/stale summary an admin has to trust blindly.
+export const getTeamPerformance = query({
+  handler: async (ctx) => {
+    await requirePermission(ctx, "manageTeam");
+    const [teamsList, members, accounts, campaigns] = await Promise.all([
+      ctx.db.query("teams").collect(),
+      ctx.db.query("teamMembers").collect(),
+      ctx.db.query("growthAccounts").collect(),
+      ctx.db.query("campaigns").collect(),
+    ]);
+
+    const rollupFor = (teamId: (typeof teamsList)[number]["_id"] | undefined) => {
+      const teamAccounts = accounts.filter((a) => a.teamId === teamId);
+      const teamCampaigns = campaigns.filter((c) => c.teamId === teamId);
+      return {
+        memberCount: members.filter((m) => m.teamId === teamId).length,
+        accountCount: teamAccounts.length,
+        pipelineValue: teamAccounts.reduce((sum, a) => sum + a.pipelineValue, 0),
+        ltv: teamAccounts.reduce((sum, a) => sum + a.ltv, 0),
+        campaignCount: teamCampaigns.length,
+        spend: teamCampaigns.reduce((sum, c) => sum + c.spend, 0),
+      };
+    };
+
+    return {
+      teams: teamsList.map((team) => ({
+        id: team._id,
+        name: team.name,
+        ...rollupFor(team._id),
+      })),
+      // Real accounts/campaigns/people that exist but aren't assigned to any
+      // team yet — surfaced so an admin can see what's still unassigned
+      // instead of it silently vanishing from every team's numbers.
+      unassigned: rollupFor(undefined),
+    };
   },
 });
 

@@ -38,9 +38,9 @@ const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 export default function RevenueImpact() {
   const t = useTranslations("growth");
   const format = useFormatter();
-  const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
+  const campaignImpact = (useQuery(api.campaigns.listCampaigns, {}) ??
     EMPTY_CAMPAIGNS) as CampaignImpact[];
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const [newCampaignOpen, setNewCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<CampaignImpact | null>(null);

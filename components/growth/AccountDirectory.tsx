@@ -26,7 +26,7 @@ export default function AccountDirectory() {
   const t = useTranslations("growth");
   const format = useFormatter();
   const router = useRouter();
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState("");

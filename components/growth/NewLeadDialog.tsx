@@ -28,7 +28,7 @@ export default function NewLeadDialog({
   defaultAccountId?: string;
 }) {
   const t = useTranslations("growth");
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const addMember = useMutation(api.growth.addMember);
   const [selectedAccountId, setSelectedAccountId] = useState("");

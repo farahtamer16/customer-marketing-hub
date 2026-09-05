@@ -35,7 +35,7 @@ const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 export default function JourneyWorkspace() {
   const t = useTranslations("growth");
   const [mode, setMode] = useState<"b2b" | "consumer">("b2b");
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   // These two cards recommend a concrete next action, so they link to a
   // real account that action applies to right now — not a fixed example —
@@ -152,7 +152,7 @@ export default function JourneyWorkspace() {
 
 function B2BJourney() {
   const t = useTranslations("growth");
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     []) as GrowthAccount[];
   const updateAccount = useMutation(api.growth.updateAccount);
 

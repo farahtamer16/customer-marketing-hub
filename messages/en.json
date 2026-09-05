@@ -3,6 +3,16 @@
     "title": "Spiders AI | Customer Growth Marketing Hub",
     "description": "Unify social, website, CRM, product, and support signals in one customer growth workspace."
   },
+  "onboarding": {
+    "title": "How will you be using Spiders AI?",
+    "description": "This decides what you can access — you can always be moved into a team later.",
+    "workspaceTitle": "Set up a workspace",
+    "workspaceDescription": "You're setting this up for your organization. You'll get the admin dashboard: manage teams, invite people, and see everyone's activity.",
+    "individualTitle": "Join as an individual",
+    "individualDescription": "You're joining to publish and manage your own content. You'll get the social media dashboard, scoped to your own posts and comments.",
+    "settingUp": "Setting up…",
+    "failed": "Couldn't complete setup — try again."
+  },
   "language": {
     "label": "Language",
     "en": "English",
@@ -711,6 +721,7 @@
       "deleteTeam": "Delete {name}",
       "deleteTeamConfirm": "Delete the team \"{name}\"? Its members stay in the workspace, just ungrouped.",
       "deleteTeamFailed": "Failed to delete team",
+      "manageTasks": "Manage {name}'s tasks",
       "assignTeam": "Team",
       "assignTeamFailed": "Failed to update team",
       "noTeam": "No team",
@@ -742,6 +753,20 @@
       "commentsHint": "The most recent comments recorded against this person's posts.",
       "commentsEmpty": "No comments recorded yet."
     },
+    "teamTasks": {
+      "title": "{name}'s tasks",
+      "description": "Assign this team something concrete — anyone on it can move it along.",
+      "close": "Close dialog",
+      "newTaskPlaceholder": "New task title…",
+      "addTask": "Add task",
+      "empty": "No tasks assigned yet.",
+      "assignedBy": "Assigned by {name}",
+      "createFailed": "Failed to create task",
+      "updateFailed": "Failed to update task",
+      "deleteFailed": "Failed to delete task",
+      "deleteTask": "Delete \"{title}\"",
+      "myTeamTasksTitle": "Your team's tasks"
+    },
     "roleDashboards": {
       "accessDenied": {
         "title": "Access denied",
@@ -758,7 +783,15 @@
         "systemLogs": "View system logs",
         "systemLogsDescription": "Review important workspace, access, and configuration events.",
         "usersAndRoles": "Users and assigned roles",
-        "recentLogs": "Recent system logs"
+        "recentLogs": "Recent system logs",
+        "teamPerformance": "Team performance",
+        "manageTeams": "Manage teams",
+        "teamMemberCount": "{count, plural, =1 {1 member} other {# members}}",
+        "teamAccounts": "Accounts",
+        "teamCampaigns": "Campaigns",
+        "teamPipeline": "Pipeline",
+        "teamLtv": "LTV",
+        "teamUnassigned": "{accounts} accounts and {campaigns} campaigns aren't assigned to any team yet."
       },
       "cmo": {
         "eyebrow": "Executive read-only view",
@@ -1110,6 +1143,7 @@
       "industry": "Industry",
       "employees": "Employees",
       "owner": "Owner",
+      "team": "Team",
       "pipelineValue": "Pipeline value ($)",
       "ltv": "Projected LTV ($)",
       "estimateSameTier": "Based on {count, plural, =1 {1 account} other {# accounts}} of this tier that became customers: pipeline ≈ {pipeline}, LTV ≈ {ltv}.",

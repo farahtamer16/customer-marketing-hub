@@ -169,6 +169,24 @@ export default defineSchema({
     createdAt: v.number(),
   }),
 
+  // A real task assigned to a whole team (not one person's comment-derived
+  // followUpTasks row) — an admin hands the team something concrete to do,
+  // and any member of that team can move it along.
+  teamTasks: defineTable({
+    teamId: v.id("teams"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    status: v.union(
+      v.literal("Todo"),
+      v.literal("InProgress"),
+      v.literal("Completed"),
+    ),
+    assignedBy: v.string(),
+    dueAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_teamId", ["teamId"]),
+
   growthAccounts: defineTable({
     name: v.string(),
     domain: v.string(),
@@ -195,6 +213,10 @@ export default defineSchema({
     pipelineValue: v.number(),
     ltv: v.number(),
     owner: v.string(),
+    // Which team is accountable for this account — separate from `owner`
+    // (a free-text person name), so a team's real pipeline/LTV rollup can
+    // be computed from accounts actually assigned to it.
+    teamId: v.optional(v.id("teams")),
     nextAction: v.union(
       v.literal("bookExecutiveDemo"),
       v.literal("shareSecurityGuide"),
@@ -273,7 +295,9 @@ export default defineSchema({
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_stage", ["stage"]),
+  })
+    .index("by_stage", ["stage"])
+    .index("by_teamId", ["teamId"]),
 
   campaigns: defineTable({
     name: v.string(),
@@ -303,9 +327,12 @@ export default defineSchema({
     customers: v.number(),
     retained: v.number(),
     ltv: v.number(),
+    // Which team owns running this campaign — for the same per-team rollup
+    // purpose as growthAccounts.teamId.
+    teamId: v.optional(v.id("teams")),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }),
+  }).index("by_teamId", ["teamId"]),
 
   journeySteps: defineTable({
     stage: v.union(

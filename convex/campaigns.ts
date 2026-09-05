@@ -56,9 +56,15 @@ async function computeSocialRollup(
 // whatever was last stored (0 for a brand new one). socialReach/
 // socialImpressions/socialEngagement work the same way from linked posts.
 export const listCampaigns = query({
-  handler: async (ctx) => {
+  args: { teamId: v.optional(v.id("teams")) },
+  handler: async (ctx, args) => {
     await requirePermission(ctx, "viewExecutiveAnalytics");
-    const campaigns = await ctx.db.query("campaigns").collect();
+    const campaigns = args.teamId
+      ? await ctx.db
+          .query("campaigns")
+          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+          .collect()
+      : await ctx.db.query("campaigns").collect();
     return await Promise.all(
       campaigns.map(async (campaign) => {
         const social = await computeSocialRollup(ctx, campaign.postIds);
@@ -117,6 +123,7 @@ export const createCampaign = mutation({
     spend: v.number(),
     accountIds: v.optional(v.array(v.id("growthAccounts"))),
     postIds: v.optional(v.array(v.id("posts"))),
+    teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageCampaigns");
@@ -144,6 +151,7 @@ export const updateCampaign = mutation({
     spend: v.optional(v.number()),
     accountIds: v.optional(v.array(v.id("growthAccounts"))),
     postIds: v.optional(v.array(v.id("posts"))),
+    teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageCampaigns");

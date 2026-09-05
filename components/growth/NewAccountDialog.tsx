@@ -6,6 +6,7 @@ import { Building2, Sparkles, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { journeyStages } from "@/lib/growth-data";
 import type { GrowthStage } from "@/types/growth";
 
@@ -21,6 +22,7 @@ export default function NewAccountDialog({
   const t = useTranslations("growth");
   const format = useFormatter();
   const createAccount = useMutation(api.growth.createAccount);
+  const teams = useQuery(api.teams.listTeamNames) ?? [];
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
   const [industry, setIndustry] = useState("");
@@ -28,6 +30,7 @@ export default function NewAccountDialog({
   const [tier, setTier] = useState<(typeof tiers)[number]>("smallBusiness");
   const [stage, setStage] = useState<GrowthStage>("discover");
   const [owner, setOwner] = useState("");
+  const [teamId, setTeamId] = useState("");
   const [pipelineValue, setPipelineValue] = useState("");
   const [ltv, setLtv] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -62,6 +65,7 @@ export default function NewAccountDialog({
     setTier("smallBusiness");
     setStage("discover");
     setOwner("");
+    setTeamId("");
     setPipelineValue("");
     setLtv("");
   };
@@ -79,6 +83,7 @@ export default function NewAccountDialog({
         tier,
         stage,
         owner: owner.trim(),
+        teamId: teamId ? (teamId as Id<"teams">) : undefined,
         pipelineValue: Number(pipelineValue) || 0,
         ltv: Number(ltv) || 0,
       });
@@ -198,14 +203,31 @@ export default function NewAccountDialog({
               </select>
             </label>
           </div>
-          <label className="block text-sm font-semibold text-slate-700">
-            {t("accounts.owner")}
-            <input
-              value={owner}
-              onChange={(event) => setOwner(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-            />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("accounts.owner")}
+              <input
+                value={owner}
+                onChange={(event) => setOwner(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("accounts.team")}
+              <select
+                value={teamId}
+                onChange={(event) => setTeamId(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="">{t("team.noTeam")}</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           {estimate && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-blue-50 px-4 py-3 text-xs text-blue-800">
               <span className="inline-flex items-center gap-1.5">

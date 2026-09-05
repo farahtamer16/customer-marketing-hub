@@ -11,7 +11,6 @@ export default function UserInitializer() {
   const { isSignedIn, isLoaded } = useAuth();
 
   const getOrCreateUser = useMutation(api.users.getOrCreate);
-  const ensureCurrentMember = useMutation(api.team.ensureCurrentMember);
   const seedDemoWorkspace = useMutation(api.seed.seedDemoWorkspace);
   const linkSignup = useMutation(api.consumerJourney.linkSignup);
 
@@ -23,9 +22,10 @@ export default function UserInitializer() {
     getOrCreateUser().catch((error) => {
       console.error("Failed to initialize user:", error);
     });
-    ensureCurrentMember().catch((error) => {
-      console.error("Failed to initialize team member:", error);
-    });
+    // Workspace membership (ensureCurrentMember) is handled by
+    // WorkspaceOnboardingGate instead of here — a brand-new sign-in needs
+    // to choose workspace vs. individual before a role is assigned, which
+    // this fire-and-forget effect has no way to collect.
     seedDemoWorkspace().catch((error) => {
       console.error("Failed to seed demo workspace:", error);
     });
@@ -38,7 +38,7 @@ export default function UserInitializer() {
     if (visitorId) {
       linkSignup({ visitorId }).catch(() => {});
     }
-  }, [isLoaded, isSignedIn, getOrCreateUser, ensureCurrentMember, seedDemoWorkspace, linkSignup]);
+  }, [isLoaded, isSignedIn, getOrCreateUser, seedDemoWorkspace, linkSignup]);
 
   return null;
 }

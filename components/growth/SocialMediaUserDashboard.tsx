@@ -12,6 +12,7 @@ import {
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { DashboardCard, RoleDashboardShell } from "./DashboardPrimitives";
+import MyTeamTasksCard from "./MyTeamTasksCard";
 
 const capabilities = [
   { key: "monitor", icon: MessagesSquare, href: "/comments" },
@@ -53,6 +54,9 @@ export default function SocialMediaUserDashboard() {
             href={href}
           />
         ))}
+      </section>
+      <section className="mt-6">
+        <MyTeamTasksCard />
       </section>
     </RoleDashboardShell>
   );

@@ -13,6 +13,7 @@ import { journeyStages } from "@/lib/growth-data";
 import type { CampaignImpact, GrowthAccount, GrowthLead } from "@/types/growth";
 import { DashboardCard, RoleDashboardShell, WorkspaceDirectory } from "./DashboardPrimitives";
 import { ScoreMeter, StagePill } from "./GrowthPrimitives";
+import MyTeamTasksCard from "./MyTeamTasksCard";
 
 const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 const EMPTY_LEADS: GrowthLead[] = [];
@@ -21,11 +22,11 @@ const EMPTY_CAMPAIGNS: CampaignImpact[] = [];
 export default function MarketingManagerDashboard() {
   const t = useTranslations("growth.roleDashboards.marketing_manager");
   const growth = useTranslations("growth");
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const growthLeads = (useQuery(api.growth.listLeads) ??
     EMPTY_LEADS) as GrowthLead[];
-  const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
+  const campaignImpact = (useQuery(api.campaigns.listCampaigns, {}) ??
     EMPTY_CAMPAIGNS) as CampaignImpact[];
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState("");
@@ -220,6 +221,10 @@ export default function MarketingManagerDashboard() {
             ))}
           </div>
         </article>
+      </section>
+
+      <section className="mt-6">
+        <MyTeamTasksCard />
       </section>
     </RoleDashboardShell>
   );

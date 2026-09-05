@@ -32,13 +32,47 @@ export const listMembers = query({
   },
 });
 
-// Called once per session so a signed-in Clerk user gets a team seat: the
-// first person ever to sign in becomes the workspace owner, an invited
-// member is linked up by email, and anyone else lands as a basic
-// contributor until an owner promotes them.
-export const ensureCurrentMember = mutation({
-  args: {},
+// True only for a brand-new sign-in with no existing teamMembers row and no
+// pre-invited/pre-created placeholder waiting to be linked by email — i.e.
+// exactly the case where ensureCurrentMember would otherwise have to guess
+// a role. The frontend gates on this to show the workspace/individual
+// choice before any row (and therefore any role) is created.
+export const needsOnboardingChoice = query({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+
+    const byClerkId = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    if (byClerkId) return false;
+
+    const email = identity.email ?? "";
+    if (email) {
+      const invited = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .unique();
+      if (invited && !invited.clerkUserId) return false;
+    }
+
+    return true;
+  },
+});
+
+// Called once per session so a signed-in Clerk user gets a team seat. An
+// existing member just gets a lastActive touch; someone already invited or
+// admin-created (createTeamMember) links up by email with the role they
+// were already given. A genuinely new, uninvited sign-in needs `intent` —
+// "workspace" makes them the owner of this workspace, "individual" makes
+// them a plain social-media-user contributor — collected by the onboarding
+// choice screen (needsOnboardingChoice gates it) instead of guessed.
+export const ensureCurrentMember = mutation({
+  args: {
+    intent: v.optional(v.union(v.literal("workspace"), v.literal("individual"))),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const email = identity.email ?? "";
@@ -78,8 +112,12 @@ export const ensureCurrentMember = mutation({
       }
     }
 
+    if (!args.intent) {
+      throw new Error("Choose workspace or individual before joining");
+    }
+
     const anyMember = await ctx.db.query("teamMembers").first();
-    const role = anyMember ? "socialMediaUser" : "ownerAdmin";
+    const role = args.intent === "workspace" ? "ownerAdmin" : "socialMediaUser";
     const name = identity.name ?? email ?? "New member";
 
     const id = await ctx.db.insert("teamMembers", {
@@ -92,15 +130,16 @@ export const ensureCurrentMember = mutation({
       createdAt: Date.now(),
     });
 
-    // The one person this silently, automatically happens to is the admin:
-    // without this, a new uninvited sign-in lands as socialMediaUser with
-    // no one told it happened, and no visible way for either side to know
-    // a role needs setting. A real notification instead of a dead end.
-    if (anyMember) {
+    // The one person this silently, automatically happens to is an existing
+    // admin: without this, a new individual sign-in lands as socialMediaUser
+    // with no one told it happened. A real notification instead of a dead
+    // end. Skipped when this is the very first member (nobody to notify) or
+    // when they explicitly chose to set up their own workspace admin seat.
+    if (anyMember && role !== "ownerAdmin") {
       await ctx.db.insert("workspaceNotifications", {
         kind: "system",
         title: "New member joined",
-        detail: `${name}${email ? ` (${email})` : ""} signed in and joined as Social Media User — review their role if that's not right.`,
+        detail: `${name}${email ? ` (${email})` : ""} signed in as an individual contributor — assign them to a team if that's not right.`,
         occurredAt: Date.now(),
         read: false,
         href: "/growth/team",

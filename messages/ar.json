@@ -3,6 +3,16 @@
     "title": "Spiders AI | مركز تسويق نمو العملاء",
     "description": "وحّد إشارات التواصل والموقع وإدارة العملاء والمنتج والدعم في مساحة واحدة لنمو العملاء."
   },
+  "onboarding": {
+    "title": "كيف ستستخدم Spiders AI؟",
+    "description": "هذا يحدد ما يمكنك الوصول إليه — يمكن نقلك إلى فريق لاحقًا في أي وقت.",
+    "workspaceTitle": "إعداد مساحة عمل",
+    "workspaceDescription": "أنت تُعِد هذا لمؤسستك. ستحصل على لوحة تحكم الأدمن: إدارة الفرق، دعوة الأشخاص، ورؤية نشاط الجميع.",
+    "individualTitle": "الانضمام كفرد",
+    "individualDescription": "أنت تنضم لنشر وإدارة محتواك الخاص. ستحصل على لوحة تحكم التواصل الاجتماعي، مقتصرة على منشوراتك وتعليقاتك.",
+    "settingUp": "جارٍ الإعداد…",
+    "failed": "تعذّر إكمال الإعداد — حاول مجددًا."
+  },
   "language": {
     "label": "اللغة",
     "en": "English",
@@ -711,6 +721,7 @@
       "deleteTeam": "حذف {name}",
       "deleteTeamConfirm": "هل تريد حذف فريق \"{name}\"؟ يبقى أعضاؤه في مساحة العمل، بدون فريق فقط.",
       "deleteTeamFailed": "تعذّر حذف الفريق",
+      "manageTasks": "إدارة مهام {name}",
       "assignTeam": "الفريق",
       "assignTeamFailed": "تعذّر تحديث الفريق",
       "noTeam": "بدون فريق",
@@ -742,6 +753,20 @@
       "commentsHint": "أحدث التعليقات المسجّلة على منشورات هذا الشخص.",
       "commentsEmpty": "لا توجد تعليقات مسجّلة بعد."
     },
+    "teamTasks": {
+      "title": "مهام {name}",
+      "description": "أسند لهذا الفريق شيئًا محددًا — يمكن لأي عضو فيه المتابعة به.",
+      "close": "إغلاق النافذة",
+      "newTaskPlaceholder": "عنوان مهمة جديدة…",
+      "addTask": "إضافة مهمة",
+      "empty": "لا توجد مهام مُسندة بعد.",
+      "assignedBy": "أسندها {name}",
+      "createFailed": "تعذّر إنشاء المهمة",
+      "updateFailed": "تعذّر تحديث المهمة",
+      "deleteFailed": "تعذّر حذف المهمة",
+      "deleteTask": "حذف \"{title}\"",
+      "myTeamTasksTitle": "مهام فريقك"
+    },
     "roleDashboards": {
       "accessDenied": {
         "title": "الوصول غير مسموح",
@@ -758,7 +783,15 @@
         "systemLogs": "عرض سجلات النظام",
         "systemLogsDescription": "مراجعة أحداث مساحة العمل والصلاحيات والإعدادات المهمة.",
         "usersAndRoles": "المستخدمون والأدوار المعينة",
-        "recentLogs": "أحدث سجلات النظام"
+        "recentLogs": "أحدث سجلات النظام",
+        "teamPerformance": "أداء الفرق",
+        "manageTeams": "إدارة الفرق",
+        "teamMemberCount": "{count, plural, =1 {عضو واحد} other {# أعضاء}}",
+        "teamAccounts": "الحسابات",
+        "teamCampaigns": "الحملات",
+        "teamPipeline": "خط الأنابيب",
+        "teamLtv": "القيمة الدائمة",
+        "teamUnassigned": "{accounts} حسابات و{campaigns} حملات غير مُسندة إلى أي فريق بعد."
       },
       "cmo": {
         "eyebrow": "عرض تنفيذي للقراءة فقط",
@@ -1110,6 +1143,7 @@
       "industry": "القطاع",
       "employees": "عدد الموظفين",
       "owner": "المسؤول",
+      "team": "الفريق",
       "pipelineValue": "قيمة الفرص ($)",
       "ltv": "القيمة المتوقعة ($)",
       "estimateSameTier": "استنادًا إلى {count, plural, =1 {حساب واحد} =2 {حسابين} other {# حسابات}} من هذه الفئة أصبحوا عملاء: قيمة الفرص ≈ {pipeline}، والقيمة المتوقعة ≈ {ltv}.",

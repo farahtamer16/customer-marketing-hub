@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
+  ClipboardList,
   Plus,
   ShieldCheck,
   UserCheck,
@@ -25,6 +26,7 @@ import type { WorkspaceMember, WorkspaceRole } from "@/types/growth";
 import CreateMemberDialog from "./CreateMemberDialog";
 import { DemoModeBanner, MetricCard } from "./GrowthPrimitives";
 import { MemberAvatar, MemberStatusPill, WorkspaceRolePill } from "./TeamPrimitives";
+import TeamTasksDialog from "./TeamTasksDialog";
 
 const EMPTY_MEMBERS: WorkspaceMember[] = [];
 const EMPTY_TEAMS: { id: string; name: string; createdAt: number; memberCount: number }[] = [];
@@ -52,6 +54,7 @@ export default function TeamAccessWorkspace() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [creatingTeam, setCreatingTeam] = useState(false);
+  const [tasksTeam, setTasksTeam] = useState<{ id: Id<"teams">; name: string } | null>(null);
   const rows = useMemo(
     () =>
       members.filter((member) => {
@@ -318,6 +321,15 @@ export default function TeamAccessWorkspace() {
                 </span>
                 <button
                   type="button"
+                  onClick={() => setTasksTeam({ id: team.id as Id<"teams">, name: team.name })}
+                  className="text-slate-400 hover:text-[#173b9a]"
+                  aria-label={t("team.manageTasks", { name: team.name })}
+                  title={t("team.manageTasks", { name: team.name })}
+                >
+                  <ClipboardList size={13} />
+                </button>
+                <button
+                  type="button"
                   onClick={async () => {
                     if (!window.confirm(t("team.deleteTeamConfirm", { name: team.name }))) return;
                     try {
@@ -452,6 +464,12 @@ export default function TeamAccessWorkspace() {
       </section>
 
       <CreateMemberDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <TeamTasksDialog
+        teamId={tasksTeam?.id ?? null}
+        teamName={tasksTeam?.name ?? ""}
+        open={tasksTeam !== null}
+        onClose={() => setTasksTeam(null)}
+      />
     </>
   );
 }

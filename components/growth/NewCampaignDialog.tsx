@@ -29,12 +29,14 @@ export default function NewCampaignDialog({
   const editMode = Boolean(campaign);
   const createCampaign = useMutation(api.campaigns.createCampaign);
   const updateCampaign = useMutation(api.campaigns.updateCampaign);
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   const publishedPosts = useQuery(api.posts.listPublished) ?? EMPTY_POSTS;
+  const teams = useQuery(api.teams.listTeamNames) ?? [];
   const [name, setName] = useState(campaign?.name ?? "");
   const [channel, setChannel] = useState<SignalSource>(campaign?.channel ?? "social");
   const [spend, setSpend] = useState(campaign ? String(campaign.spend) : "");
+  const [teamId, setTeamId] = useState(campaign?.teamId ?? "");
   const [accountIds, setAccountIds] = useState<string[]>(campaign?.accountIds ?? []);
   const [postIds, setPostIds] = useState<string[]>(campaign?.postIds ?? []);
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +76,7 @@ export default function NewCampaignDialog({
           name: name.trim(),
           channel,
           spend: Number(spend) || 0,
+          teamId: teamId ? (teamId as Id<"teams">) : undefined,
           accountIds: accountIds as Id<"growthAccounts">[],
           postIds: postIds as Id<"posts">[],
         });
@@ -82,6 +85,7 @@ export default function NewCampaignDialog({
           name: name.trim(),
           channel,
           spend: Number(spend) || 0,
+          teamId: teamId ? (teamId as Id<"teams">) : undefined,
           accountIds: accountIds.length
             ? (accountIds as Id<"growthAccounts">[])
             : undefined,
@@ -166,16 +170,33 @@ export default function NewCampaignDialog({
               </select>
             </label>
           </div>
-          <label className="block text-sm font-semibold text-slate-700">
-            {t("revenue.spend")}
-            <input
-              type="number"
-              min={0}
-              value={spend}
-              onChange={(event) => setSpend(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-            />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("revenue.spend")}
+              <input
+                type="number"
+                min={0}
+                value={spend}
+                onChange={(event) => setSpend(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              {t("team.assignTeam")}
+              <select
+                value={teamId}
+                onChange={(event) => setTeamId(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="">{t("team.noTeam")}</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <div>
             <p className="text-sm font-semibold text-slate-700">

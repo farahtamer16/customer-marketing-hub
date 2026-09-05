@@ -18,9 +18,9 @@ export default function CMODashboard() {
   const t = useTranslations("growth.roleDashboards.cmo");
   const growth = useTranslations("growth");
   const format = useFormatter();
-  const growthAccounts = (useQuery(api.growth.listAccounts) ??
+  const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     []) as GrowthAccount[];
-  const campaignImpact = (useQuery(api.campaigns.listCampaigns) ??
+  const campaignImpact = (useQuery(api.campaigns.listCampaigns, {}) ??
     []) as CampaignImpact[];
   const workspaceNotifications = useQuery(api.notifications.listNotifications) ?? [];
   const totalPipeline = growthAccounts.reduce(

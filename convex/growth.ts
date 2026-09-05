@@ -59,6 +59,7 @@ function toAccount(doc: Doc<"growthAccounts">) {
     pipelineValue: doc.pipelineValue,
     ltv: doc.ltv,
     owner: doc.owner,
+    teamId: doc.teamId ?? null,
     nextAction: doc.nextAction,
     members: doc.members,
     signals: doc.signals,
@@ -67,9 +68,15 @@ function toAccount(doc: Doc<"growthAccounts">) {
 }
 
 export const listAccounts = query({
-  handler: async (ctx) => {
+  args: { teamId: v.optional(v.id("teams")) },
+  handler: async (ctx, args) => {
     await requirePermission(ctx, "viewExecutiveAnalytics");
-    const accounts = await ctx.db.query("growthAccounts").collect();
+    const accounts = args.teamId
+      ? await ctx.db
+          .query("growthAccounts")
+          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+          .collect()
+      : await ctx.db.query("growthAccounts").collect();
     return accounts.map(toAccount);
   },
 });
@@ -233,6 +240,7 @@ export const createAccount = mutation({
     owner: v.string(),
     pipelineValue: v.number(),
     ltv: v.number(),
+    teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageLeads");
@@ -274,6 +282,7 @@ export const updateAccount = mutation({
       ),
     ),
     owner: v.optional(v.string()),
+    teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageLeads");

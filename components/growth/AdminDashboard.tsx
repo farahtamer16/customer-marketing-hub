@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "convex/react";
 import { ScrollText, ShieldCheck, UsersRound } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
@@ -14,6 +15,7 @@ export default function AdminDashboard() {
   const format = useFormatter();
   const workspaceMembers = useQuery(api.team.listMembers) ?? [];
   const workspaceAudit = useQuery(api.audit.listEntries) ?? [];
+  const teamPerformance = useQuery(api.teams.getTeamPerformance);
 
   return (
     <RoleDashboardShell role="admin">
@@ -35,6 +37,71 @@ export default function AdminDashboard() {
           href="/growth/activity"
         />
       </section>
+
+      {teamPerformance && teamPerformance.teams.length > 0 && (
+        <section className="glass-card mt-6 rounded-3xl p-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold text-[#071e55]">{t("teamPerformance")}</h2>
+            <Link
+              href="/growth/team"
+              className="text-xs font-semibold text-[#173b9a] hover:underline"
+            >
+              {t("manageTeams")}
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {teamPerformance.teams.map((team) => (
+              <div
+                key={team.id}
+                className="rounded-2xl border border-slate-100 bg-white/70 p-4"
+              >
+                <p className="text-sm font-semibold text-[#071e55]">{team.name}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {t("teamMemberCount", { count: team.memberCount })}
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                  <span>
+                    {t("teamAccounts")}:{" "}
+                    <strong className="text-[#071e55]">{team.accountCount}</strong>
+                  </span>
+                  <span>
+                    {t("teamCampaigns")}:{" "}
+                    <strong className="text-[#071e55]">{team.campaignCount}</strong>
+                  </span>
+                  <span>
+                    {t("teamPipeline")}:{" "}
+                    <strong className="text-[#071e55]">
+                      {format.number(team.pipelineValue, {
+                        style: "currency",
+                        currency: "USD",
+                        notation: "compact",
+                      })}
+                    </strong>
+                  </span>
+                  <span>
+                    {t("teamLtv")}:{" "}
+                    <strong className="text-[#071e55]">
+                      {format.number(team.ltv, {
+                        style: "currency",
+                        currency: "USD",
+                        notation: "compact",
+                      })}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {teamPerformance.unassigned.accountCount + teamPerformance.unassigned.campaignCount > 0 && (
+            <p className="mt-4 text-xs text-slate-400">
+              {t("teamUnassigned", {
+                accounts: teamPerformance.unassigned.accountCount,
+                campaigns: teamPerformance.unassigned.campaignCount,
+              })}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
         <article className="glass-card rounded-3xl p-6">

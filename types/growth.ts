@@ -91,6 +91,7 @@ export interface CampaignImpact {
   name: string;
   channel: SignalSource;
   spend: number;
+  teamId?: string | null;
   accountIds?: string[];
   accounts: number;
   opportunities: number;
