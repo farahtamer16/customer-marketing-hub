@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { fetchMutation } from "convex/nextjs";
 import { NextRequest, NextResponse } from "next/server";
@@ -13,12 +14,25 @@ type CreateMemberRequest = {
 
 const ROLES = ["ownerAdmin", "cmo", "marketingManager", "socialMediaUser"] as const;
 
+// Excludes visually-confusable characters (0/O, 1/l/I) — this gets typed
+// or copy-pasted by hand since there's no invite-email system wired up yet.
+const PASSWORD_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
 function generateTempPassword() {
-  // Clerk requires 8+ chars; guarantee upper/lower/digit/symbol so it's
-  // never rejected, then hand it to the admin to share out of band (there
-  // is no invite-email system wired up yet).
-  const random = Math.random().toString(36).slice(2, 10);
-  return `Sp!${random}A1`;
+  // Math.random().toString(36) does NOT reliably produce a fixed-length
+  // string — JS drops trailing zero bits in the float→string conversion,
+  // so slice(2, 10) could silently come back shorter than 8 characters,
+  // intermittently landing under Clerk's minimum password length and
+  // getting the whole request rejected. Drawing from crypto.randomBytes
+  // into a fixed-size loop guarantees the real length every time.
+  const bytes = randomBytes(12);
+  let random = "";
+  for (const byte of bytes) {
+    random += PASSWORD_CHARSET[byte % PASSWORD_CHARSET.length];
+  }
+  // Fixed prefix/suffix guarantee upper/lower/symbol/digit are all present
+  // regardless of what the random draw contains.
+  return `Sp!${random}9`;
 }
 
 export async function POST(req: NextRequest) {

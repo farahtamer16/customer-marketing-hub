@@ -13,7 +13,13 @@ const workspaceRole = v.union(
 // group teamMembers can be assigned into, so the same person/permission
 // model still applies, just filterable by team.
 export const createTeam = mutation({
-  args: { name: v.string() },
+  args: {
+    name: v.string(),
+    // Members to link to the team at creation time — same id (this
+    // team's) written onto each of them in one step, instead of an admin
+    // assigning them one row at a time afterward.
+    memberIds: v.optional(v.array(v.id("teamMembers"))),
+  },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "manageTeam");
     const name = args.name.trim();
@@ -23,6 +29,9 @@ export const createTeam = mutation({
       createdBy: actor.clerkUserId ?? actor.email,
       createdAt: Date.now(),
     });
+    for (const memberId of args.memberIds ?? []) {
+      await ctx.db.patch(memberId, { teamId: id });
+    }
     await ctx.db.insert("auditLog", {
       actor: actor.name,
       action: "teamCreated",

@@ -24,6 +24,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { workspacePermissions, workspaceRoles } from "@/lib/workspace-data";
 import type { WorkspaceMember, WorkspaceRole } from "@/types/growth";
 import CreateMemberDialog from "./CreateMemberDialog";
+import CreateTeamDialog from "./CreateTeamDialog";
 import { DemoModeBanner, MetricCard } from "./GrowthPrimitives";
 import { MemberAvatar, MemberStatusPill, WorkspaceRolePill } from "./TeamPrimitives";
 import TeamTasksDialog from "./TeamTasksDialog";
@@ -43,17 +44,14 @@ export default function TeamAccessWorkspace() {
     EMPTY_MEMBERS) as WorkspaceMember[];
   const teams = useQuery(api.teams.listTeams) ?? EMPTY_TEAMS;
   const updateMemberRole = useMutation(api.team.updateMemberRole);
-  const removeMember = useMutation(api.team.removeMember);
   const assignMemberToTeam = useMutation(api.teams.assignMemberToTeam);
-  const createTeam = useMutation(api.teams.createTeam);
   const deleteTeam = useMutation(api.teams.deleteTeam);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
   const [teamFilter, setTeamFilter] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [newTeamName, setNewTeamName] = useState("");
-  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [tasksTeam, setTasksTeam] = useState<{ id: Id<"teams">; name: string } | null>(null);
   const rows = useMemo(
     () =>
@@ -203,7 +201,13 @@ export default function TeamAccessWorkspace() {
                 if (!window.confirm(t("team.removeConfirm", { name: row.original.name })))
                   return;
                 try {
-                  await removeMember({ memberId: row.original.id as Id<"teamMembers"> });
+                  const response = await fetch("/api/team/remove-member", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ memberId: row.original.id }),
+                  });
+                  const data = await response.json();
+                  if (!response.ok) throw new Error(data.error ?? t("team.removeFailed"));
                 } catch (error) {
                   toast.error(
                     error instanceof Error ? error.message : t("team.removeFailed"),
@@ -219,7 +223,7 @@ export default function TeamAccessWorkspace() {
         ),
       },
     ],
-    [assignMemberToTeam, format, removeMember, router, t, teams, updateMemberRole],
+    [assignMemberToTeam, format, router, t, teams, updateMemberRole],
   );
   const active = members.filter((member) => member.status === "active").length;
   const invited = members.filter(
@@ -276,37 +280,13 @@ export default function TeamAccessWorkspace() {
             <h2 className="font-semibold text-[#071e55]">{t("team.teamsTitle")}</h2>
             <p className="mt-1 text-xs text-slate-500">{t("team.teamsHint")}</p>
           </div>
-          <form
-            className="flex items-center gap-2"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              const name = newTeamName.trim();
-              if (!name || creatingTeam) return;
-              setCreatingTeam(true);
-              try {
-                await createTeam({ name });
-                setNewTeamName("");
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : t("team.createTeamFailed"));
-              } finally {
-                setCreatingTeam(false);
-              }
-            }}
+          <button
+            type="button"
+            onClick={() => setCreateTeamOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#173b9a] px-3 py-2 text-sm font-semibold text-white"
           >
-            <input
-              value={newTeamName}
-              onChange={(event) => setNewTeamName(event.target.value)}
-              placeholder={t("team.newTeamPlaceholder")}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-            />
-            <button
-              type="submit"
-              disabled={!newTeamName.trim() || creatingTeam}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#173b9a] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Plus size={15} /> {t("team.createTeam")}
-            </button>
-          </form>
+            <Plus size={15} /> {t("team.createTeam")}
+          </button>
         </div>
         {teams.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -464,6 +444,11 @@ export default function TeamAccessWorkspace() {
       </section>
 
       <CreateMemberDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <CreateTeamDialog
+        open={createTeamOpen}
+        onClose={() => setCreateTeamOpen(false)}
+        members={members}
+      />
       <TeamTasksDialog
         teamId={tasksTeam?.id ?? null}
         teamName={tasksTeam?.name ?? ""}
