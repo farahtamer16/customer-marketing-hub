@@ -62,24 +62,19 @@ const EMPTY_OVERVIEW = {
   latest: null as Doc<"analytics"> | null,
 };
 
-async function overviewForUserId(
-  ctx: QueryCtx,
-  userId: string,
-  platform: string | undefined,
-  days: number | undefined,
-) {
-  const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
-
-  const analytics = await ctx.db
+async function fetchAnalyticsRows(ctx: QueryCtx, userId: string, since: number) {
+  return await ctx.db
     .query("analytics")
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .filter((q) => q.gte(q.field("scrapedAt"), since))
     .collect();
+}
 
-  const filtered = platform
-    ? analytics.filter((a) => a.platform === platform)
-    : analytics;
-
+// Shared by the single-user and whole-team overviews — same reduction over
+// whatever raw analytics rows the caller already gathered, so a team's
+// numbers are real totals across its members' actual rows, not an average
+// of averages.
+function summarizeAnalytics(filtered: Doc<"analytics">[]) {
   let totalLikes = 0,
     totalComments = 0,
     totalShares = 0,
@@ -128,6 +123,47 @@ async function overviewForUserId(
   };
 }
 
+async function overviewForUserId(
+  ctx: QueryCtx,
+  userId: string,
+  platform: string | undefined,
+  days: number | undefined,
+) {
+  const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+  const analytics = await fetchAnalyticsRows(ctx, userId, since);
+  const filtered = platform
+    ? analytics.filter((a) => a.platform === platform)
+    : analytics;
+  return summarizeAnalytics(filtered);
+}
+
+// Every real analytics row across everyone currently on a team — the
+// Content Studio's team-scoped overview. A real sum of the team's actual
+// numbers, not an average of each member's own average.
+async function overviewForTeamId(
+  ctx: QueryCtx,
+  teamId: Id<"teams">,
+  platform: string | undefined,
+  days: number | undefined,
+) {
+  const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+  const members = await ctx.db
+    .query("teamMembers")
+    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+    .collect();
+  const linked = members.filter(
+    (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
+  );
+  const perMember = await Promise.all(
+    linked.map((member) => fetchAnalyticsRows(ctx, member.clerkUserId, since)),
+  );
+  const analytics = perMember.flat();
+  const filtered = platform
+    ? analytics.filter((a) => a.platform === platform)
+    : analytics;
+  return summarizeAnalytics(filtered);
+}
+
 // ── Dashboard overview (totals, averages, latest) ──────────────────
 // Identity is derived from the caller's own session, never trusted from an
 // argument — otherwise anyone signed in could read another teammate's
@@ -156,6 +192,20 @@ export const getOverviewAdmin = query({
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageTeam");
     return await overviewForUserId(ctx, args.userId, args.platform, args.days);
+  },
+});
+
+// Content Studio's team-scoped overview — real totals across everyone
+// currently on the chosen team, not one person's numbers.
+export const getOverviewForTeamAdmin = query({
+  args: {
+    teamId: v.id("teams"),
+    platform: v.optional(v.string()),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    return await overviewForTeamId(ctx, args.teamId, args.platform, args.days);
   },
 });
 
@@ -196,23 +246,12 @@ function engagementRateFor(entry: { likes: number; comments: number; shares?: nu
 // post actually drove (leads, questions, complaints...), not just likes —
 // computed live from the same Gemini-classified comments already stored,
 // never a separate/fabricated number.
-async function postsWithAnalyticsForUserId(
-  ctx: QueryCtx,
-  userId: string,
-  platform: string | undefined,
-  status: string | undefined,
-) {
-  const posts = await ctx.db
-    .query("posts")
-    .withIndex("by_userId", (q) => q.eq("userId", userId))
-    .collect();
-
-  let filtered = posts;
-  if (platform) filtered = filtered.filter((p) => p.platform === platform);
-  if (status) filtered = filtered.filter((p) => p.status === status);
-
+// Shared by the single-user and whole-team posts+analytics lists — enriches
+// whatever raw post docs the caller already gathered with each post's
+// latest analytics, comment breakdown, and engagement rate.
+async function enrichPostsWithAnalytics(ctx: QueryCtx, posts: Doc<"posts">[]) {
   const result = [];
-  for (const post of filtered) {
+  for (const post of posts) {
     const latest = await ctx.db
       .query("analytics")
       .withIndex("by_postId", (q) => q.eq("postId", post._id))
@@ -231,6 +270,54 @@ async function postsWithAnalyticsForUserId(
   result.sort((a, b) => (b.post.publishedAt || 0) - (a.post.publishedAt || 0));
 
   return { data: result, count: result.length };
+}
+
+async function postsWithAnalyticsForUserId(
+  ctx: QueryCtx,
+  userId: string,
+  platform: string | undefined,
+  status: string | undefined,
+) {
+  const posts = await ctx.db
+    .query("posts")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .collect();
+
+  let filtered = posts;
+  if (platform) filtered = filtered.filter((p) => p.platform === platform);
+  if (status) filtered = filtered.filter((p) => p.status === status);
+
+  return await enrichPostsWithAnalytics(ctx, filtered);
+}
+
+// Content Studio's team-scoped posts+analytics list — every real post
+// published by anyone currently on the chosen team.
+async function postsWithAnalyticsForTeamId(
+  ctx: QueryCtx,
+  teamId: Id<"teams">,
+  platform: string | undefined,
+  status: string | undefined,
+) {
+  const members = await ctx.db
+    .query("teamMembers")
+    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+    .collect();
+  const linked = members.filter(
+    (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
+  );
+  const perMember = await Promise.all(
+    linked.map((member) =>
+      ctx.db
+        .query("posts")
+        .withIndex("by_userId", (q) => q.eq("userId", member.clerkUserId))
+        .collect(),
+    ),
+  );
+  let filtered = perMember.flat();
+  if (platform) filtered = filtered.filter((p) => p.platform === platform);
+  if (status) filtered = filtered.filter((p) => p.status === status);
+
+  return await enrichPostsWithAnalytics(ctx, filtered);
 }
 
 export const getPostsWithAnalytics = query({
@@ -258,6 +345,19 @@ export const getPostsWithAnalyticsAdmin = query({
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageTeam");
     return await postsWithAnalyticsForUserId(ctx, args.userId, args.platform, args.status);
+  },
+});
+
+// Content Studio's team-scoped posts+analytics list.
+export const getPostsWithAnalyticsForTeamAdmin = query({
+  args: {
+    teamId: v.id("teams"),
+    platform: v.optional(v.string()),
+    status: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    return await postsWithAnalyticsForTeamId(ctx, args.teamId, args.platform, args.status);
   },
 });
 

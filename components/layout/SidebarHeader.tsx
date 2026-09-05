@@ -4,12 +4,15 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Calendar, Gauge, House, Info, Plus } from "lucide-react";
+import { Calendar, Gauge, House, Info, LayoutGrid, Plus, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { dashboardNavigation } from "@/lib/dashboard-access";
+import { useStudioMode } from "@/hooks/useStudioMode";
 import { navIcons } from "@/lib/nav-icons";
 import type { DashboardRole } from "@/types/dashboard";
+
+const STUDIO_TABS = ["posts", "calendar", "comments", "analytics"] as const;
 
 export default function SidebarHeader() {
   const t = useTranslations("sidebar");
@@ -17,21 +20,34 @@ export default function SidebarHeader() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const role = useQuery(api.team.getMyRole);
+  const isAdmin = role === "admin";
+  const studio = useStudioMode();
+  const teams = useQuery(api.teams.listTeamNames, isAdmin ? {} : "skip") ?? [];
   const items = role ? dashboardNavigation[role] : [];
-  const contentItems = items
-    .filter((item) => item.section === "content")
-    .map(({ label, href }) => ({
-      name: t(label),
-      href,
-      icon: navIcons[label],
-    }));
-  const growthItems = items
-    .filter((item) => item.section === "growth")
-    .map(({ label, href }) => ({
-      name: t(label),
-      href,
-      icon: navIcons[label],
-    }));
+  const showGrowthNav = !isAdmin || studio.mode === "admin";
+  const showStudioNav = isAdmin && studio.mode === "content" && studio.teamId;
+  const contentItems = showStudioNav
+    ? STUDIO_TABS.map((tabValue) => ({
+        name: t(`studioTabs.${tabValue}`),
+        href: `/growth/studio/${studio.teamId}/${tabValue}`,
+        icon: navIcons[tabValue],
+      }))
+    : items
+        .filter((item) => item.section === "content")
+        .map(({ label, href }) => ({
+          name: t(label),
+          href,
+          icon: navIcons[label],
+        }));
+  const growthItems = showGrowthNav
+    ? items
+        .filter((item) => item.section === "growth")
+        .map(({ label, href }) => ({
+          name: t(label),
+          href,
+          icon: navIcons[label],
+        }))
+    : [];
   const dropdownItems = [
     { name: t("newPost"), href: "/create/post", post: true },
     { name: t("addComment"), href: "/comments/post", post: false },
@@ -54,6 +70,48 @@ export default function SidebarHeader() {
   return (
     <nav className="mt-8" aria-label={t("workspace")}>
       <RoleBadge role={role} />
+
+      {isAdmin && (
+        <div className="mt-4">
+          <div className="flex gap-1 rounded-xl bg-white/70 p-1">
+            <button
+              type="button"
+              onClick={() => studio.setMode("admin")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold ${studio.mode === "admin" ? "bg-[#173b9a] text-white" : "text-slate-500 hover:text-[#173b9a]"}`}
+            >
+              <ShieldCheck size={14} />
+              {t("modeAdmin")}
+            </button>
+            <button
+              type="button"
+              onClick={() => studio.setMode("content")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold ${studio.mode === "content" ? "bg-[#173b9a] text-white" : "text-slate-500 hover:text-[#173b9a]"}`}
+            >
+              <LayoutGrid size={14} />
+              {t("modeContentStudio")}
+            </button>
+          </div>
+          {studio.mode === "content" && (
+            <div className="mt-3">
+              <label className="block text-[0.62rem] font-bold uppercase tracking-[0.12em] text-slate-400">
+                {t("studioTeamLabel")}
+              </label>
+              <select
+                value={studio.teamId ?? ""}
+                onChange={(event) => studio.setTeamId(event.target.value || null)}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+              >
+                <option value="">{t("studioTeamPlaceholder")}</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {role === "social_media_user" && (
         <div className="relative mt-4 inline-block text-start" ref={dropdownRef}>

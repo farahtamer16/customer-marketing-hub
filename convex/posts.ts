@@ -134,6 +134,33 @@ export const getPostsForUserAdmin = query({
   },
 });
 
+// Every real post published by anyone currently on this team — the
+// Content Studio's team-scoped posts/calendar view, not one admin's own
+// posts. Gated the same as getPostsForUserAdmin, just aggregated across a
+// team's linked members instead of one.
+export const getPostsForTeamAdmin = query({
+  args: { teamId: v.id("teams") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    const members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    const linked = members.filter(
+      (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
+    );
+    const perMember = await Promise.all(
+      linked.map((member) =>
+        ctx.db
+          .query("posts")
+          .withIndex("by_userId", (q) => q.eq("userId", member.clerkUserId))
+          .collect(),
+      ),
+    );
+    return perMember.flat().sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
 // Same lookup for a known, already-trusted userId — used by meta.ts's
 // findOwnPostByUrl, where the userId comes from a real identity or a
 // stored comment's userId, never from client input. Internal only.

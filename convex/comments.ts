@@ -206,6 +206,32 @@ export const getCommentsForUserAdmin = query({
   },
 });
 
+// Every real comment recorded against anyone currently on this team — the
+// Content Studio's team-scoped comments view. Gated the same as
+// getCommentsForUserAdmin, just aggregated across the team's members.
+export const getCommentsForTeamAdmin = query({
+  args: { teamId: v.id("teams") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "manageTeam");
+    const members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    const linked = members.filter(
+      (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
+    );
+    const perMember = await Promise.all(
+      linked.map((member) =>
+        ctx.db
+          .query("comments")
+          .withIndex("by_userId", (q) => q.eq("userId", member.clerkUserId))
+          .collect(),
+      ),
+    );
+    return perMember.flat().sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
 async function requireOwnComment(ctx: MutationCtx, commentId: Id<"comments">) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Not authenticated");

@@ -28,14 +28,11 @@ interface NavEntry {
 }
 
 export const dashboardNavigation: Record<DashboardRole, NavEntry[]> = {
-  // The owner/admin has every permission, so their nav covers the whole
-  // app — everyone else gets a curated set for their role.
+  // The owner/admin has every permission. Their "content" section isn't
+  // listed here — it's not one admin's own posts, it's whichever team
+  // they've picked in Content Studio mode (SidebarHeader builds those nav
+  // entries dynamically from useStudioMode's selected team).
   admin: [
-    { label: "posts", href: "/posts", section: "content" },
-    { label: "calendar", href: "/schedule", section: "content" },
-    { label: "comments", href: "/comments", section: "content" },
-    { label: "analytics", href: "/analytics", section: "content" },
-    { label: "tasks", href: "/tasks", section: "content" },
     { label: "growthAccounts", href: "/growth/accounts", section: "growth" },
     { label: "growthLeads", href: "/growth/leads", section: "growth" },
     { label: "growthJourneys", href: "/growth/journeys", section: "growth" },

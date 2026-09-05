@@ -103,7 +103,17 @@
     "settings": "إعدادات الملف الشخصي",
     "signOut": "تسجيل الخروج",
     "profilePhoto": "صورة الملف الشخصي لـ {name}",
-    "footer": "نسخة MVP عملية · مساحة عمل مترابطة"
+    "footer": "نسخة MVP عملية · مساحة عمل مترابطة",
+    "modeAdmin": "الإدارة",
+    "modeContentStudio": "استوديو المحتوى",
+    "studioTeamLabel": "الفريق",
+    "studioTeamPlaceholder": "اختر فريقًا…",
+    "studioTabs": {
+      "posts": "المنشورات",
+      "calendar": "التقويم",
+      "comments": "التعليقات",
+      "analytics": "التحليلات"
+    }
   },
   "auth": {
     "eyebrow": "مركز التسويق عبر التواصل الاجتماعي",
@@ -766,6 +776,32 @@
       "deleteFailed": "تعذّر حذف المهمة",
       "deleteTask": "حذف \"{title}\"",
       "myTeamTasksTitle": "مهام فريقك"
+    },
+    "contentStudio": {
+      "back": "العودة إلى الفريق",
+      "eyebrow": "استوديو المحتوى",
+      "loadingTeam": "جارٍ تحميل الفريق…",
+      "tabs": "تبويبات استوديو المحتوى",
+      "tabLabels": {
+        "posts": "المنشورات",
+        "calendar": "التقويم",
+        "comments": "التعليقات",
+        "analytics": "التحليلات"
+      },
+      "loading": "جارٍ التحميل…",
+      "postsEmpty": "لم ينشر هذا الفريق أي منشورات بعد.",
+      "postColumn": "المنشور المنشور",
+      "platform": "المنصة",
+      "likes": "الإعجابات",
+      "comments": "التعليقات",
+      "shares": "المشاركات",
+      "reach": "الوصول",
+      "impressions": "مرات الظهور",
+      "commentsEmpty": "لا توجد تعليقات مسجّلة لهذا الفريق بعد.",
+      "notAvailable": "غير متاح",
+      "engagementRate": "معدل التفاعل",
+      "previousMonth": "الشهر السابق",
+      "nextMonth": "الشهر التالي"
     },
     "roleDashboards": {
       "accessDenied": {

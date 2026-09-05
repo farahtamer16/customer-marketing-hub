@@ -103,7 +103,17 @@
     "settings": "Profile settings",
     "signOut": "Sign out",
     "profilePhoto": "{name} profile photo",
-    "footer": "Functional MVP · Connected workspace"
+    "footer": "Functional MVP · Connected workspace",
+    "modeAdmin": "Admin",
+    "modeContentStudio": "Content Studio",
+    "studioTeamLabel": "Team",
+    "studioTeamPlaceholder": "Choose a team…",
+    "studioTabs": {
+      "posts": "Posts",
+      "calendar": "Calendar",
+      "comments": "Comments",
+      "analytics": "Analytics"
+    }
   },
   "auth": {
     "eyebrow": "Social media marketing hub",
@@ -766,6 +776,32 @@
       "deleteFailed": "Failed to delete task",
       "deleteTask": "Delete \"{title}\"",
       "myTeamTasksTitle": "Your team's tasks"
+    },
+    "contentStudio": {
+      "back": "Back to team",
+      "eyebrow": "Content studio",
+      "loadingTeam": "Loading team…",
+      "tabs": "Content studio tabs",
+      "tabLabels": {
+        "posts": "Posts",
+        "calendar": "Calendar",
+        "comments": "Comments",
+        "analytics": "Analytics"
+      },
+      "loading": "Loading…",
+      "postsEmpty": "No posts published by this team yet.",
+      "postColumn": "Published post",
+      "platform": "Platform",
+      "likes": "Likes",
+      "comments": "Comments",
+      "shares": "Shares",
+      "reach": "Reach",
+      "impressions": "Impressions",
+      "commentsEmpty": "No comments recorded for this team yet.",
+      "notAvailable": "Not available",
+      "engagementRate": "Engagement rate",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "roleDashboards": {
       "accessDenied": {
