@@ -32,12 +32,14 @@ export default function TeamContentStudio({
   teamId,
   tab,
 }: {
-  teamId: Id<"teams">;
+  // null = the whole workspace, no team filter — Content Studio's default.
+  teamId: Id<"teams"> | null;
   tab: StudioTab;
 }) {
   const t = useTranslations("growth.contentStudio");
   const teams = useQuery(api.teams.listTeamNames) ?? [];
-  const team = teams.find((entry) => entry.id === teamId);
+  const team = teamId ? teams.find((entry) => entry.id === teamId) : null;
+  const routeSegment = teamId ?? "workspace";
 
   return (
     <div className="space-y-6">
@@ -55,7 +57,7 @@ export default function TeamContentStudio({
           {t("eyebrow")}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[#071e55]">
-          {team ? team.name : t("loadingTeam")}
+          {teamId ? (team ? team.name : t("loadingTeam")) : t("wholeWorkspace")}
         </h1>
       </div>
 
@@ -66,7 +68,7 @@ export default function TeamContentStudio({
           return (
             <Link
               key={value}
-              href={`/growth/studio/${teamId}/${value}`}
+              href={`/growth/studio/${routeSegment}/${value}`}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${active ? "bg-[#173b9a] text-white shadow-lg shadow-blue-900/15" : "bg-white/70 text-slate-600 hover:bg-white"}`}
             >
               <Icon size={16} />
@@ -84,9 +86,9 @@ export default function TeamContentStudio({
   );
 }
 
-function PostsTab({ teamId }: { teamId: Id<"teams"> }) {
+function PostsTab({ teamId }: { teamId: Id<"teams"> | null }) {
   const t = useTranslations("growth.contentStudio");
-  const posts = useQuery(api.analytics.getPostsWithAnalyticsForTeamAdmin, { teamId });
+  const posts = useQuery(api.analytics.getPostsWithAnalyticsForTeamAdmin, { teamId: teamId ?? undefined });
   const cancelPost = useMutation(api.posts.cancelScheduledItemAdmin);
   const retryPost = useMutation(api.posts.retryPostAdmin);
   const deletePost = useMutation(api.posts.deletePostAdmin);
@@ -185,9 +187,9 @@ function PostsTab({ teamId }: { teamId: Id<"teams"> }) {
   );
 }
 
-function CommentsTab({ teamId }: { teamId: Id<"teams"> }) {
+function CommentsTab({ teamId }: { teamId: Id<"teams"> | null }) {
   const t = useTranslations("growth.contentStudio");
-  const comments = useQuery(api.comments.getCommentsForTeamAdmin, { teamId });
+  const comments = useQuery(api.comments.getCommentsForTeamAdmin, { teamId: teamId ?? undefined });
   const deleteComment = useMutation(api.comments.deleteCommentAdmin);
 
   return (
@@ -231,10 +233,10 @@ function CommentsTab({ teamId }: { teamId: Id<"teams"> }) {
   );
 }
 
-function AnalyticsTab({ teamId }: { teamId: Id<"teams"> }) {
+function AnalyticsTab({ teamId }: { teamId: Id<"teams"> | null }) {
   const t = useTranslations("growth.contentStudio");
   const format = useFormatter();
-  const overview = useQuery(api.analytics.getOverviewForTeamAdmin, { teamId });
+  const overview = useQuery(api.analytics.getOverviewForTeamAdmin, { teamId: teamId ?? undefined });
 
   if (!overview) {
     return (
@@ -276,11 +278,11 @@ function AnalyticsTab({ teamId }: { teamId: Id<"teams"> }) {
   );
 }
 
-function CalendarTab({ teamId }: { teamId: Id<"teams"> }) {
+function CalendarTab({ teamId }: { teamId: Id<"teams"> | null }) {
   const t = useTranslations("growth.contentStudio");
   const formatter = useFormatter();
   const locale = useLocale();
-  const posts = useQuery(api.posts.getPostsForTeamAdmin, { teamId });
+  const posts = useQuery(api.posts.getPostsForTeamAdmin, { teamId: teamId ?? undefined });
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);

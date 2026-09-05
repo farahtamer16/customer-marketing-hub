@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Calendar, Gauge, House, Info, LayoutGrid, Plus, ShieldCheck } from "lucide-react";
+import { Calendar, Gauge, House, Info, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { dashboardNavigation } from "@/lib/dashboard-access";
@@ -24,18 +24,19 @@ export default function SidebarHeader() {
   const studio = useStudioMode();
   const teams = useQuery(api.teams.listTeamNames, isAdmin ? {} : "skip") ?? [];
   const items = role ? dashboardNavigation[role] : [];
-  const inStudioMode = isAdmin && studio.mode === "content";
-  const showStudioNav = inStudioMode && studio.teamId;
-  const contentItems = showStudioNav
-    ? STUDIO_TABS.map((tabValue) => ({
-        name: t(`studioTabs.${tabValue}`),
-        href: `/growth/studio/${studio.teamId}/${tabValue}`,
-        icon: navIcons[tabValue],
-      }))
-    : inStudioMode
-      // Content Studio mode with no team chosen yet — the picker above
-      // handles that, so nothing to link to until one is selected.
-      ? []
+  const viewingTeam = isAdmin ? teams.find((team) => team.id === studio.view) : undefined;
+  // Content Studio always exists. For an admin it defaults to the whole
+  // workspace's real content (matching the "workspace" choice made at
+  // sign-up) — "mine" narrows it to just their own personal content, and
+  // picking a team narrows it to that team's. Growth Hub below is a
+  // completely separate section, always visible regardless of this.
+  const contentItems =
+    isAdmin && studio.view !== "mine"
+      ? STUDIO_TABS.map((tabValue) => ({
+          name: t(`studioTabs.${tabValue}`),
+          href: `/growth/studio/${viewingTeam ? viewingTeam.id : "workspace"}/${tabValue}`,
+          icon: navIcons[tabValue],
+        }))
       : items
           .filter((item) => item.section === "content")
           .map(({ label, href }) => ({
@@ -43,8 +44,6 @@ export default function SidebarHeader() {
             href,
             icon: navIcons[label],
           }));
-  // Growth Hub is always available regardless of mode — Content Studio is
-  // an additional view, not a replacement for it.
   const growthItems = items
     .filter((item) => item.section === "growth")
     .map(({ label, href }) => ({
@@ -77,43 +76,22 @@ export default function SidebarHeader() {
 
       {isAdmin && (
         <div className="mt-4">
-          <div className="flex gap-1 rounded-xl bg-white/70 p-1">
-            <button
-              type="button"
-              onClick={() => studio.setMode("admin")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold ${studio.mode === "admin" ? "bg-[#173b9a] text-white" : "text-slate-500 hover:text-[#173b9a]"}`}
-            >
-              <ShieldCheck size={14} />
-              {t("modeAdmin")}
-            </button>
-            <button
-              type="button"
-              onClick={() => studio.setMode("content")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold ${studio.mode === "content" ? "bg-[#173b9a] text-white" : "text-slate-500 hover:text-[#173b9a]"}`}
-            >
-              <LayoutGrid size={14} />
-              {t("modeContentStudio")}
-            </button>
-          </div>
-          {studio.mode === "content" && (
-            <div className="mt-3">
-              <label className="block text-[0.62rem] font-bold uppercase tracking-[0.12em] text-slate-400">
-                {t("studioTeamLabel")}
-              </label>
-              <select
-                value={studio.teamId ?? ""}
-                onChange={(event) => studio.setTeamId(event.target.value || null)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
-              >
-                <option value="">{t("studioTeamPlaceholder")}</option>
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <label className="block text-[0.62rem] font-bold uppercase tracking-[0.12em] text-slate-400">
+            {t("studioTeamLabel")}
+          </label>
+          <select
+            value={studio.view}
+            onChange={(event) => studio.setView(event.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+          >
+            <option value="workspace">{t("studioTeamWorkspace")}</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+            <option value="mine">{t("studioTeamMyOwn")}</option>
+          </select>
         </div>
       )}
 
@@ -168,8 +146,20 @@ export default function SidebarHeader() {
 
       {contentItems.length > 0 && (
         <NavSection
-          title={t("contentStudio")}
-          hint={t("contentStudioHint")}
+          title={
+            viewingTeam
+              ? t("contentStudioForTeam", { name: viewingTeam.name })
+              : isAdmin && studio.view === "workspace"
+                ? t("contentStudioWorkspace")
+                : t("contentStudio")
+          }
+          hint={
+            viewingTeam
+              ? t("contentStudioForTeamHint")
+              : isAdmin && studio.view === "workspace"
+                ? t("contentStudioWorkspaceHint")
+                : t("contentStudioHint")
+          }
           items={contentItems}
           pathname={pathname}
         />

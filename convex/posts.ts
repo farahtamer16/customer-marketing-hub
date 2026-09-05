@@ -138,14 +138,19 @@ export const getPostsForUserAdmin = query({
 // Content Studio's team-scoped posts/calendar view, not one admin's own
 // posts. Gated the same as getPostsForUserAdmin, just aggregated across a
 // team's linked members instead of one.
+// teamId omitted = every real post from everyone in the workspace, not one
+// team — the Content Studio's default view, since choosing "workspace" at
+// sign-up means seeing the whole workspace, not an empty personal feed.
 export const getPostsForTeamAdmin = query({
-  args: { teamId: v.id("teams") },
+  args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageTeam");
-    const members = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-      .collect();
+    const members = args.teamId
+      ? await ctx.db
+          .query("teamMembers")
+          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+          .collect()
+      : await ctx.db.query("teamMembers").collect();
     const linked = members.filter(
       (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
     );

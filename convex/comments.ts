@@ -209,14 +209,17 @@ export const getCommentsForUserAdmin = query({
 // Every real comment recorded against anyone currently on this team — the
 // Content Studio's team-scoped comments view. Gated the same as
 // getCommentsForUserAdmin, just aggregated across the team's members.
+// teamId omitted = every real comment across the whole workspace.
 export const getCommentsForTeamAdmin = query({
-  args: { teamId: v.id("teams") },
+  args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "manageTeam");
-    const members = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-      .collect();
+    const members = args.teamId
+      ? await ctx.db
+          .query("teamMembers")
+          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+          .collect()
+      : await ctx.db.query("teamMembers").collect();
     const linked = members.filter(
       (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
     );

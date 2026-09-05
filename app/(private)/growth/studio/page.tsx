@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-// No team chosen yet — pick one from the sidebar's Content Studio switcher
-// (Team & Access also works as a fallback entry point).
+// Direct hit with no team/view segment — default to the whole workspace,
+// same as the sidebar's default Content Studio view.
 export default function ContentStudioPage() {
-  redirect("/growth/team");
+  redirect("/growth/studio/workspace/posts");
 }

@@ -139,18 +139,21 @@ async function overviewForUserId(
 
 // Every real analytics row across everyone currently on a team — the
 // Content Studio's team-scoped overview. A real sum of the team's actual
-// numbers, not an average of each member's own average.
+// numbers, not an average of each member's own average. teamId omitted =
+// every member in the whole workspace (Content Studio's default view).
 async function overviewForTeamId(
   ctx: QueryCtx,
-  teamId: Id<"teams">,
+  teamId: Id<"teams"> | undefined,
   platform: string | undefined,
   days: number | undefined,
 ) {
   const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
-  const members = await ctx.db
-    .query("teamMembers")
-    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
-    .collect();
+  const members = teamId
+    ? await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+        .collect()
+    : await ctx.db.query("teamMembers").collect();
   const linked = members.filter(
     (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
   );
@@ -199,7 +202,7 @@ export const getOverviewAdmin = query({
 // currently on the chosen team, not one person's numbers.
 export const getOverviewForTeamAdmin = query({
   args: {
-    teamId: v.id("teams"),
+    teamId: v.optional(v.id("teams")),
     platform: v.optional(v.string()),
     days: v.optional(v.number()),
   },
@@ -291,17 +294,20 @@ async function postsWithAnalyticsForUserId(
 }
 
 // Content Studio's team-scoped posts+analytics list — every real post
-// published by anyone currently on the chosen team.
+// published by anyone currently on the chosen team. teamId omitted = every
+// post across the whole workspace.
 async function postsWithAnalyticsForTeamId(
   ctx: QueryCtx,
-  teamId: Id<"teams">,
+  teamId: Id<"teams"> | undefined,
   platform: string | undefined,
   status: string | undefined,
 ) {
-  const members = await ctx.db
-    .query("teamMembers")
-    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
-    .collect();
+  const members = teamId
+    ? await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+        .collect()
+    : await ctx.db.query("teamMembers").collect();
   const linked = members.filter(
     (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
   );
@@ -351,7 +357,7 @@ export const getPostsWithAnalyticsAdmin = query({
 // Content Studio's team-scoped posts+analytics list.
 export const getPostsWithAnalyticsForTeamAdmin = query({
   args: {
-    teamId: v.id("teams"),
+    teamId: v.optional(v.id("teams")),
     platform: v.optional(v.string()),
     status: v.optional(v.string()),
   },

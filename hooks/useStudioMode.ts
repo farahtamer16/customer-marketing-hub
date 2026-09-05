@@ -2,61 +2,38 @@
 
 import { useCallback, useState } from "react";
 
-// Admin-only sidebar mode: "admin" shows the Growth Hub nav (accounts,
-// leads, journeys, approvals, revenue, team, audit) as before. "content"
-// shows the Content Studio nav, scoped to one team the admin picks first —
-// real posts/calendar/comments/analytics for that team, not the admin's
-// own personal content. Purely a per-browser UI preference (localStorage),
-// never shared or read by anyone else.
-const STORAGE_KEY = "spiders-ai:studio-mode";
+// What the admin's Content Studio sidebar section is currently scoped to.
+// "workspace" (the default — matches choosing "workspace" at sign-up: you
+// see the whole workspace's real content, not an empty personal feed) —
+// "mine" (just the admin's own personal content, same as everyone else
+// gets) — or a specific team's id (that team's real aggregate content).
+// Growth Hub is unaffected by this — it's a separate section, always
+// visible. Purely a per-browser UI preference (localStorage), never
+// shared or read by anyone else.
+export type StudioView = "workspace" | "mine" | string;
 
-type StudioMode = "admin" | "content";
+const STORAGE_KEY = "spiders-ai:studio-view";
 
-interface StoredState {
-  mode: StudioMode;
-  teamId: string | null;
-}
-
-function readStored(): StoredState {
-  if (typeof window === "undefined") return { mode: "admin", teamId: null };
+function readStored(): StudioView {
+  if (typeof window === "undefined") return "workspace";
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { mode: "admin", teamId: null };
-    const parsed = JSON.parse(raw);
-    return {
-      mode: parsed.mode === "content" ? "content" : "admin",
-      teamId: typeof parsed.teamId === "string" ? parsed.teamId : null,
-    };
+    return window.localStorage.getItem(STORAGE_KEY) || "workspace";
   } catch {
-    return { mode: "admin", teamId: null };
+    return "workspace";
   }
 }
 
 export function useStudioMode() {
-  const [state, setState] = useState<StoredState>(() => readStored());
+  const [view, setViewState] = useState<StudioView>(() => readStored());
 
-  const persist = useCallback((next: StoredState) => {
-    setState(next);
+  const setView = useCallback((next: StudioView) => {
+    setViewState(next);
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // Best-effort only — worst case the choice doesn't survive a reload.
     }
   }, []);
 
-  const setMode = useCallback(
-    (mode: StudioMode) => {
-      persist({ mode, teamId: mode === "content" ? state.teamId : null });
-    },
-    [persist, state.teamId],
-  );
-
-  const setTeamId = useCallback(
-    (teamId: string | null) => {
-      persist({ mode: "content", teamId });
-    },
-    [persist],
-  );
-
-  return { mode: state.mode, teamId: state.teamId, setMode, setTeamId };
+  return { view, setView };
 }
