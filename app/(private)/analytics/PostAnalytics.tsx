@@ -1,26 +1,31 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { AnalyticsRow } from "./AnalyticsOverview";
 
 export default function PostAnalytics({ rows }: { rows: AnalyticsRow[] }) {
+  const t = useTranslations("analytics");
+
   return (
-    <section className="mt-6 overflow-x-auto rounded-3xl border border-white/80 bg-white/55">
+    <div className="overflow-x-auto">
       <div className="min-w-[820px]">
-        <div className="grid grid-cols-[2fr_repeat(5,1fr)] border-b border-slate-100 px-6 py-4 text-[0.62rem] font-bold uppercase tracking-[0.13em] text-slate-400">
-          <span>Published post</span>
-          <span>Likes</span>
-          <span>Comments</span>
-          <span>Shares</span>
-          <span>Reach</span>
-          <span>Impressions</span>
+        <div className="grid grid-cols-[2fr_repeat(5,1fr)] border-b border-slate-100 pb-4 text-[0.62rem] font-bold uppercase tracking-[0.13em] text-slate-400">
+          <span>{t("publishedPost")}</span>
+          <span>{t("likes")}</span>
+          <span>{t("comments")}</span>
+          <span>{t("shares")}</span>
+          <span>{t("reach")}</span>
+          <span>{t("impressions")}</span>
         </div>
         {rows.map(({ post, analytics }) => (
           <Link
             key={post._id}
             href={`/posts/${post._id}`}
-            className="grid grid-cols-[2fr_repeat(5,1fr)] px-6 py-4 text-sm text-slate-600 odd:bg-white/35 hover:bg-blue-50/50"
-            title="Open this post to refresh its analytics"
+            className="grid grid-cols-[2fr_repeat(5,1fr)] py-4 text-sm text-slate-600 odd:bg-white/35 hover:bg-blue-50/50"
+            title={t("refreshHint")}
           >
-            <span className="truncate pr-5 font-semibold text-[#173b9a]">
+            <span className="truncate pe-5 font-semibold text-[#173b9a]">
               {post.content}
             </span>
             <span>{(analytics?.likes ?? 0).toLocaleString()}</span>
@@ -33,6 +38,6 @@ export default function PostAnalytics({ rows }: { rows: AnalyticsRow[] }) {
           </Link>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

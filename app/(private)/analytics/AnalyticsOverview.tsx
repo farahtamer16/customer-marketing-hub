@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
+  BarChart3,
   Eye,
   Heart,
+  Layers,
   MessageCircleMore,
   Share2,
+  Table2,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -133,8 +137,8 @@ function AnalyticsContent({
     {
       label: t("trackedPosts"),
       value: format.number(overview.totalPosts),
-      icon: TrendingUp,
-      color: "text-blue-700 bg-blue-50",
+      icon: Layers,
+      color: "text-indigo-700 bg-indigo-50",
     },
   ];
 
@@ -164,9 +168,45 @@ function AnalyticsContent({
         <BestPostingTimes />
         <PlatformComparison />
       </section>
-      <Chart rows={rows} />
-      <PostAnalytics rows={rows} />
+      <PostBreakdown rows={rows} />
     </>
+  );
+}
+
+function PostBreakdown({ rows }: { rows: AnalyticsRow[] }) {
+  const t = useTranslations("analytics");
+  const [view, setView] = useState<"chart" | "table">("chart");
+
+  return (
+    <section className="glass-card mt-6 rounded-3xl p-6 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#3556d9]">
+            {t("postPerformance")}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold">{t("performanceOverTime")}</h2>
+        </div>
+        <div className="flex rounded-xl bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setView("chart")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${view === "chart" ? "bg-white text-[#173b9a] shadow-sm" : "text-slate-500"}`}
+          >
+            <BarChart3 size={14} /> {t("chartView")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("table")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${view === "table" ? "bg-white text-[#173b9a] shadow-sm" : "text-slate-500"}`}
+          >
+            <Table2 size={14} /> {t("tableView")}
+          </button>
+        </div>
+      </div>
+      <div className="mt-8">
+        {view === "chart" ? <Chart rows={rows} /> : <PostAnalytics rows={rows} />}
+      </div>
+    </section>
   );
 }
 
