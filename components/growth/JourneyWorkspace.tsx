@@ -65,23 +65,30 @@ export default function JourneyWorkspace() {
 
       <section className="glass-card rounded-3xl p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex rounded-2xl bg-slate-100 p-1">
-            {visibleModes.map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setMode(value)}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${mode === value ? "bg-white text-[#173b9a] shadow-sm" : "text-slate-500"}`}
-              >
-                {value === "b2b" ? (
-                  <Building2 size={16} />
-                ) : (
-                  <UserRound size={16} />
-                )}
-                {t(`journeys.${value}`)}
-              </button>
-            ))}
-          </div>
+          {visibleModes.length > 1 ? (
+            <div className="flex rounded-2xl bg-slate-100 p-1">
+              {visibleModes.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${mode === value ? "bg-white text-[#173b9a] shadow-sm" : "text-slate-500"}`}
+                >
+                  {value === "b2b" ? (
+                    <Building2 size={16} />
+                  ) : (
+                    <UserRound size={16} />
+                  )}
+                  {t(`journeys.${value}`)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-1 text-sm font-semibold text-[#173b9a]">
+              <Building2 size={16} />
+              {t("journeys.b2b")}
+            </div>
+          )}
           <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-blue-700">
             {t("journeys.adminView")}
           </span>
