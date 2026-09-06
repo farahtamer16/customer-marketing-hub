@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -13,10 +14,13 @@ import {
   ListTree,
   Mail,
   Scale,
+  Trash2,
+  UserX,
   UsersRound,
   Wand2,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { GrowthAccount } from "@/types/growth";
@@ -41,9 +45,12 @@ export default function AccountProfile({
 }) {
   const t = useTranslations("growth");
   const format = useFormatter();
+  const router = useRouter();
   const [logSignalOpen, setLogSignalOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   // A real benchmark, not a guess: what accounts of this tier actually
   // turned into once they closed.
   const estimate = useQuery(api.growth.estimateOutcomes, { tier: account.tier });
@@ -51,6 +58,38 @@ export default function AccountProfile({
     accountId: account.id as Id<"growthAccounts">,
   });
   const lastOutreach = outreachHistory?.[0];
+  const deleteAccount = useMutation(api.growth.deleteAccount);
+  const removeMember = useMutation(api.growth.removeMember);
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(t("accountDetail.deleteAccountConfirm", { name: account.name })))
+      return;
+    setDeleting(true);
+    try {
+      await deleteAccount({ accountId: account.id as Id<"growthAccounts"> });
+      router.push("/growth/accounts");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("accountDetail.deleteAccountFailed"),
+      );
+      setDeleting(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!window.confirm(t("accountDetail.removeMemberConfirm", { name: memberName })))
+      return;
+    setRemovingMemberId(memberId);
+    try {
+      await removeMember({ accountId: account.id as Id<"growthAccounts">, memberId });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("accountDetail.removeMemberFailed"),
+      );
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -81,13 +120,24 @@ export default function AccountProfile({
                 </p>
               </div>
             </div>
-            <div className="text-start sm:text-end">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                {t("accountDetail.owner")}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[#071e55]">
-                {account.owner}
-              </p>
+            <div className="flex items-start gap-4 sm:gap-6">
+              <div className="text-start sm:text-end">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  {t("accountDetail.owner")}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#071e55]">
+                  {account.owner}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                aria-label={t("accountDetail.deleteAccount")}
+              >
+                <Trash2 size={14} /> {t("accountDetail.deleteAccount")}
+              </button>
             </div>
           </div>
           <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -326,9 +376,21 @@ export default function AccountProfile({
                         {member.title}
                       </p>
                     </div>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[0.62rem] font-bold text-blue-700">
-                      {t(`roles.${member.role}`)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[0.62rem] font-bold text-blue-700">
+                        {t(`roles.${member.role}`)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(member.id, member.name)}
+                        disabled={removingMemberId === member.id}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                        aria-label={t("accountDetail.removeMember", { name: member.name })}
+                        title={t("accountDetail.removeMember", { name: member.name })}
+                      >
+                        <UserX size={14} />
+                      </button>
+                    </div>
                   </div>
                   {member.email && (
                     <p className="mt-3 inline-flex items-center gap-1.5 text-[0.68rem] text-slate-500">

@@ -395,6 +395,33 @@ export const addMember = mutation({
   },
 });
 
+export const removeMember = mutation({
+  args: { accountId: v.id("growthAccounts"), memberId: v.string() },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "manageLeads");
+
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
+
+    const membersBeforeScoring = account.members.filter(
+      (member) => member.id !== args.memberId,
+    );
+    const scores = computeAccountScores({
+      stage: account.stage,
+      members: membersBeforeScoring,
+      signals: account.signals,
+    });
+    const members = recomputeMemberScores(membersBeforeScoring, scores.intentScore);
+
+    await ctx.db.patch(args.accountId, {
+      members,
+      ...scores,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const deleteAccount = mutation({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {

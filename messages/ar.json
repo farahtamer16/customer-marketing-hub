@@ -1245,7 +1245,13 @@
       "createAction": "إنشاء إجراء نمو",
       "logSignal": "تسجيل إشارة",
       "buyingGroup": "مجموعة الشراء",
-      "accountVsPeople": "الشركة هي الحساب، وهؤلاء الأشخاص يؤثرون في القرار أو يستخدمون المنتج."
+      "accountVsPeople": "الشركة هي الحساب، وهؤلاء الأشخاص يؤثرون في القرار أو يستخدمون المنتج.",
+      "deleteAccount": "حذف الحساب",
+      "deleteAccountConfirm": "هل تريد حذف {name}؟ سيؤدي ذلك إلى إزالة الحساب ومجموعة الشراء الخاصة به وسجل الإشارات. لا يمكن التراجع عن هذا الإجراء.",
+      "deleteAccountFailed": "فشل حذف الحساب",
+      "removeMember": "إزالة {name}",
+      "removeMemberConfirm": "هل تريد إزالة {name} من مجموعة الشراء هذه؟",
+      "removeMemberFailed": "فشلت إزالة العضو"
     },
     "logSignal": {
       "title": "تسجيل إشارة",

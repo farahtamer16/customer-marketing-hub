@@ -1245,7 +1245,13 @@
       "createAction": "Create growth action",
       "logSignal": "Log a signal",
       "buyingGroup": "Buying group",
-      "accountVsPeople": "The company is the account; these people influence or use the product."
+      "accountVsPeople": "The company is the account; these people influence or use the product.",
+      "deleteAccount": "Delete account",
+      "deleteAccountConfirm": "Delete {name}? This removes the account, its buying group, and its signal history. This can't be undone.",
+      "deleteAccountFailed": "Failed to delete account",
+      "removeMember": "Remove {name}",
+      "removeMemberConfirm": "Remove {name} from this buying group?",
+      "removeMemberFailed": "Failed to remove member"
     },
     "logSignal": {
       "title": "Log a signal",
