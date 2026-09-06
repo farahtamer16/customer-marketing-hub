@@ -437,3 +437,57 @@ describe("meta.publishScheduledPost still works with no identity (cron pipeline)
     ).resolves.toBeNull();
   });
 });
+
+describe("teams.sendInviteEmail", () => {
+  test("gated by manageTeam permission and workspace membership; degrades gracefully with no RESEND_API_KEY", async () => {
+    const t = convexTest(schema);
+    const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+    const bob = t.withIdentity(identity("bob_sub", "bob@b.com", "Bob"));
+
+    await alice.mutation(api.workspaces.createWorkspace, { name: "A", intent: "workspace" });
+    const { workspaceId: wsB, memberId: bobMemberId } = await bob.mutation(
+      api.workspaces.createWorkspace,
+      { name: "B", intent: "workspace" },
+    );
+
+    // A socialMediaUser in bob's own workspace (no manageTeam permission)
+    // can't send invites either — this isn't ownership-based, it's a real
+    // permission gate.
+    const plain = t.withIdentity(identity("plain_sub", "plain@b.com", "Plain"));
+    await t.run((ctx) =>
+      ctx.db.insert("teamMembers", {
+        workspaceId: wsB,
+        name: "Plain",
+        email: "plain@b.com",
+        role: "socialMediaUser",
+        status: "active",
+        clerkUserId: "plain_sub",
+        createdAt: Date.now(),
+      }),
+    );
+    await expect(
+      plain.action(api.teams.sendInviteEmail, {
+        memberId: bobMemberId,
+        temporaryPassword: "Sp!aaaaaaaaaa9",
+      }),
+    ).rejects.toThrow(/permission|manageTeam/i);
+
+    // Cross-workspace: alice cannot send an invite email for bob's member row.
+    await expect(
+      alice.action(api.teams.sendInviteEmail, {
+        memberId: bobMemberId,
+        temporaryPassword: "Sp!aaaaaaaaaa9",
+      }),
+    ).rejects.toThrow(/not found/i);
+
+    // Same workspace, but this sandbox has no RESEND_API_KEY configured —
+    // must degrade to { sent: false, error } rather than throwing, so
+    // member creation itself is never rolled back over an email hiccup.
+    const result = await bob.action(api.teams.sendInviteEmail, {
+      memberId: bobMemberId,
+      temporaryPassword: "Sp!aaaaaaaaaa9",
+    });
+    expect(result.sent).toBe(false);
+    expect(result.error).toMatch(/RESEND_API_KEY/i);
+  });
+});

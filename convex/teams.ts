@@ -1,5 +1,6 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { requireInWorkspace, requireMember, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
@@ -265,5 +266,89 @@ export const listMembersByTeam = query({
       lastActive: member.lastActive,
       teamId: member.teamId ?? null,
     }));
+  },
+});
+
+// Reuses the canonical permission table via an internalQuery so the action
+// below (which has no ctx.db of its own) can still gate itself, same
+// pattern as outreach.ts's checkSendPermission.
+export const checkInvitePermission = internalQuery({
+  handler: async (ctx) => {
+    return await requirePermission(ctx, "manageTeam");
+  },
+});
+
+// Looked up server-side rather than trusting a client-supplied workspace
+// name or email — the action only ever emails the address already on file
+// for a real member row, never an arbitrary address.
+export const getMemberForInvite = internalQuery({
+  args: { memberId: v.id("teamMembers") },
+  handler: async (ctx, args) => {
+    const member = await ctx.db.get(args.memberId);
+    if (!member) return null;
+    const workspace = await ctx.db.get(member.workspaceId);
+    return { ...member, workspaceName: workspace?.name ?? "your workspace" };
+  },
+});
+
+// Sends the new teammate their sign-in details by real email instead of
+// leaving the admin to copy-paste and relay a temporary password by hand.
+// Best-effort: a missing/misconfigured RESEND_API_KEY (or any send
+// failure) doesn't fail member creation — the admin still sees the
+// password in the dialog as a fallback to share manually.
+export const sendInviteEmail = action({
+  args: {
+    memberId: v.id("teamMembers"),
+    temporaryPassword: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ sent: boolean; error?: string }> => {
+    const actor = await ctx.runQuery(internal.teams.checkInvitePermission, {});
+    const member = await ctx.runQuery(internal.teams.getMemberForInvite, {
+      memberId: args.memberId,
+    });
+    if (!member) return { sent: false, error: "Member not found" };
+    requireInWorkspace(actor, member);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return { sent: false, error: "Email sending isn't configured yet — RESEND_API_KEY is missing." };
+    }
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+    const signInUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/sign-in`
+      : undefined;
+
+    const lines = [
+      `Hi ${member.name},`,
+      "",
+      `You've been added to ${member.workspaceName} on Spiders AI.`,
+      "",
+      "Sign in with:",
+      `  Email: ${member.email}`,
+      `  Temporary password: ${args.temporaryPassword}`,
+      "",
+      signInUrl ? `Sign in here: ${signInUrl}` : undefined,
+      "",
+      "You'll be asked to set your own password after signing in.",
+    ].filter((line): line is string => line !== undefined);
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: member.email,
+        subject: `You're invited to ${member.workspaceName} on Spiders AI`,
+        text: lines.join("\n"),
+      }),
+    });
+    const data = await response.json().catch(() => ({}) as { message?: string });
+    if (!response.ok) {
+      return { sent: false, error: data.message || `Resend request failed (${response.status})` };
+    }
+    return { sent: true };
   },
 });

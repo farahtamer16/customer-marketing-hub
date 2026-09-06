@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { fetchMutation } from "convex/nextjs";
+import { fetchAction, fetchMutation } from "convex/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -14,8 +14,8 @@ type CreateMemberRequest = {
 
 const ROLES = ["ownerAdmin", "cmo", "marketingManager", "socialMediaUser"] as const;
 
-// Excludes visually-confusable characters (0/O, 1/l/I) — this gets typed
-// or copy-pasted by hand since there's no invite-email system wired up yet.
+// Excludes visually-confusable characters (0/O, 1/l/I) — this still gets
+// shown in the dialog as a fallback in case the invite email doesn't send.
 const PASSWORD_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
 function generateTempPassword() {
@@ -107,7 +107,25 @@ export async function POST(req: NextRequest) {
       },
       { token },
     );
-    return NextResponse.json({ memberId, temporaryPassword: password });
+
+    // Best-effort: the account and workspace row already exist either way —
+    // an email failure here shouldn't roll any of that back, it just falls
+    // back to the temporary password shown in the dialog.
+    const emailResult = await fetchAction(
+      api.teams.sendInviteEmail,
+      { memberId, temporaryPassword: password },
+      { token },
+    ).catch((error) => ({
+      sent: false as const,
+      error: error instanceof Error ? error.message : "Could not send the invite email",
+    }));
+
+    return NextResponse.json({
+      memberId,
+      temporaryPassword: password,
+      emailSent: emailResult.sent,
+      emailError: emailResult.sent ? undefined : emailResult.error,
+    });
   } catch (error) {
     // The real Clerk account exists but the workspace row failed (e.g. a
     // race on the email uniqueness check) — remove it rather than leaving

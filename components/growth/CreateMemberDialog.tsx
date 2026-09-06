@@ -23,7 +23,11 @@ export default function CreateMemberDialog({
   const [role, setRole] = useState<WorkspaceRole>("socialMediaUser");
   const [teamId, setTeamId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ email: string; password: string } | null>(null);
+  const [result, setResult] = useState<{
+    email: string;
+    password: string;
+    emailSent: boolean;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
   const valid = name.trim().length >= 2 && /^\S+@\S+\.\S+$/.test(email);
 
@@ -69,7 +73,11 @@ export default function CreateMemberDialog({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? t("team.createMemberFailed"));
-      setResult({ email: email.trim(), password: data.temporaryPassword });
+      setResult({
+        email: email.trim(),
+        password: data.temporaryPassword,
+        emailSent: Boolean(data.emailSent),
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("team.createMemberFailed"));
     } finally {
@@ -118,7 +126,9 @@ export default function CreateMemberDialog({
         {result ? (
           <div className="space-y-5 p-6">
             <p className="text-sm leading-6 text-slate-600">
-              {t("team.createMemberSuccess", { email: result.email })}
+              {result.emailSent
+                ? t("team.createMemberSuccessEmailed", { email: result.email })
+                : t("team.createMemberSuccess", { email: result.email })}
             </p>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -141,7 +151,11 @@ export default function CreateMemberDialog({
                   {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-amber-700">{t("team.temporaryPasswordHint")}</p>
+              <p className="mt-2 text-xs text-amber-700">
+                {result.emailSent
+                  ? t("team.temporaryPasswordBackupHint")
+                  : t("team.temporaryPasswordHint")}
+              </p>
             </div>
             <div className="flex justify-end border-t border-slate-100 pt-5">
               <button
