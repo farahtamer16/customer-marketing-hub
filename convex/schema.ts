@@ -11,6 +11,16 @@ export default defineSchema({
     name: v.string(),
     createdBy: v.string(),
     createdAt: v.number(),
+    // Off by default for every workspace — an admin has to explicitly
+    // opt in and pick which comment classifications qualify. When on,
+    // a matching new comment gets an AI-drafted reply posted live to
+    // Facebook/Instagram with no human review step (see autoReply.ts).
+    autoReply: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        classifications: v.array(v.string()),
+      }),
+    ),
   }),
 
   users: defineTable({
@@ -133,6 +143,21 @@ export default defineSchema({
     // show "this is a known CRM contact" right where comments are reviewed.
     matchedAccountId: v.optional(v.id("growthAccounts")),
     matchedAccountName: v.optional(v.string()),
+    // Meta's own id for this comment — required to reply to it via the
+    // Graph API. Only present for comments actually fetched from Meta
+    // (meta.fetchPostComments); comments entered by hand never have one,
+    // so they're never eligible for auto-reply.
+    platformCommentId: v.optional(v.string()),
+    // Outcome of an auto-reply attempt (see autoReply.ts) — absent until
+    // one has actually been tried for this comment.
+    autoReply: v.optional(
+      v.object({
+        status: v.union(v.literal("sent"), v.literal("failed")),
+        text: v.optional(v.string()),
+        error: v.optional(v.string()),
+        repliedAt: v.number(),
+      }),
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_status_scheduled", ["status", "scheduledAt"])

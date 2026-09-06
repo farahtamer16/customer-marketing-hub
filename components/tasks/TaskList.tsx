@@ -11,6 +11,7 @@ import { useMutation, useQuery } from "convex/react";
 import PageHeader from "@/components/hub/PageHeader";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import AutoReplySettings from "./AutoReplySettings";
 import TaskItem from "./TaskItem";
 import { useTranslations } from "next-intl";
 
@@ -41,6 +42,8 @@ export default function TaskList() {
         title={t("title")}
         description={t("description")}
       />
+
+      <AutoReplySettings />
 
       {user === undefined || (user && tasks === undefined) ? (
         <LoadingState />

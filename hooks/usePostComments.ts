@@ -23,9 +23,12 @@ type FetchedPostComment = {
   classification: CommentClassification;
   createdAt: number;
   platform?: "facebook" | "instagram";
+  platformCommentId?: string;
 };
 
 type RawComment = {
+  id?: string;
+  platformCommentId?: string;
   authorName?: string;
   author?: string;
   username?: string;
@@ -82,6 +85,7 @@ const normalizeComment = (
       platform === "facebook" || platform === "instagram"
         ? platform
         : undefined,
+    platformCommentId: comment.id ?? comment.platformCommentId,
   };
 };
 
@@ -156,6 +160,7 @@ export function usePostComments(postId: Id<"posts">, userId: string) {
             platform: comment.platform,
             classification: comment.classification,
             scrapedAt: comment.createdAt,
+            platformCommentId: comment.platformCommentId,
           })),
         });
       }

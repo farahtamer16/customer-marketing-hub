@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
@@ -591,5 +591,184 @@ describe("comments.getCommentsForPost (now workspace-scoped, was fully open befo
 
     const asAnon = await t.query(api.comments.getCommentsForPost, { postId });
     expect(asAnon).toEqual([]);
+  });
+});
+
+describe("autoReply.ts (AI auto-reply to comments)", () => {
+  test("updateAutoReplySettings is manageWorkspace-gated and workspace-scoped", async () => {
+    const t = convexTest(schema);
+    const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+    const { workspaceId: wsA } = await alice.mutation(api.workspaces.createWorkspace, {
+      name: "A",
+      intent: "workspace",
+    });
+
+    // Default is off, nothing configured yet.
+    expect(await alice.query(api.workspaces.getAutoReplySettings, {})).toEqual({
+      enabled: false,
+      classifications: [],
+    });
+
+    // A marketingManager (no manageWorkspace permission) can't change it.
+    await t.run((ctx) =>
+      ctx.db.insert("teamMembers", {
+        workspaceId: wsA,
+        clerkUserId: "carol_sub",
+        name: "Carol",
+        email: "carol@a.com",
+        role: "marketingManager",
+        status: "active",
+        createdAt: Date.now(),
+      }),
+    );
+    const carol = t.withIdentity(identity("carol_sub", "carol@a.com", "Carol"));
+    await expect(
+      carol.mutation(api.workspaces.updateAutoReplySettings, {
+        enabled: true,
+        classifications: ["Question"],
+      }),
+    ).rejects.toThrow(/permission|manageWorkspace/i);
+
+    // The ownerAdmin can.
+    await alice.mutation(api.workspaces.updateAutoReplySettings, {
+      enabled: true,
+      classifications: ["Question", "Question", "Lead"],
+    });
+    const saved = await alice.query(api.workspaces.getAutoReplySettings, {});
+    expect(saved.enabled).toBe(true);
+    expect(new Set(saved.classifications)).toEqual(new Set(["Question", "Lead"]));
+
+    // A second, unrelated workspace never sees workspace A's settings.
+    const bob = t.withIdentity(identity("bob_sub", "bob@b.com", "Bob"));
+    await bob.mutation(api.workspaces.createWorkspace, { name: "B", intent: "workspace" });
+    expect(await bob.query(api.workspaces.getAutoReplySettings, {})).toEqual({
+      enabled: false,
+      classifications: [],
+    });
+  });
+
+  test("maybeAutoReply respects the enabled flag, the classification allowlist, and requires a real platform comment id", async () => {
+    // storeComments hands off to autoReply.ts via ctx.scheduler.runAfter(0,
+    // ...) — that only actually runs (and finishInProgressScheduledFunctions
+    // only actually waits for it) once fake timers advance past it, per
+    // convex-test's own docs. Real time never reaches a runAfter(0) job on
+    // its own within a synchronous test.
+    vi.useFakeTimers();
+    try {
+      const t = convexTest(schema);
+      const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+      const { workspaceId } = await alice.mutation(api.workspaces.createWorkspace, {
+        name: "A",
+        intent: "workspace",
+      });
+
+      // A connected Facebook account so a matching comment gets far enough
+      // to actually attempt generating a reply (and only then hit the
+      // missing-API-key guardrail this sandbox is expected to hit).
+      await t.run((ctx) =>
+        ctx.db.insert("socialAccounts", {
+          userId: "alice_sub",
+          workspaceId,
+          platform: "Facebook",
+          accountName: "Alice's Page",
+          accountHandle: "alicepage",
+          status: "Connected",
+          platformAccountId: "page_123",
+          accessToken: "fake_token",
+          createdAt: Date.now(),
+        }),
+      );
+
+      const postId = await alice.mutation(api.posts.schedulePost, {
+        platform: "Facebook",
+        content: "Alice's post",
+        scheduledAt: Date.now() + 60_000,
+      });
+
+      const flush = () => t.finishAllScheduledFunctions(() => vi.runAllTimers());
+
+      // 1. Auto-reply disabled entirely (the default) -> no attempt at all.
+      await alice.mutation(api.comments.storeComments, {
+        comments: [
+          {
+            postId,
+            authorName: "Someone",
+            content: "How much does this cost?",
+            platform: "facebook",
+            classification: "Question",
+            scrapedAt: Date.now(),
+            platformCommentId: "fb_comment_1",
+          },
+        ],
+      });
+      await flush();
+      let stored = await alice.query(api.comments.getCommentsForPost, { postId });
+      expect(stored.find((c) => c.platformCommentId === "fb_comment_1")?.autoReply).toBeUndefined();
+
+      // 2. Enable it, but only for "Lead" — a "Question" comment still shouldn't fire.
+      await alice.mutation(api.workspaces.updateAutoReplySettings, {
+        enabled: true,
+        classifications: ["Lead"],
+      });
+      await alice.mutation(api.comments.storeComments, {
+        comments: [
+          {
+            postId,
+            authorName: "Someone Else",
+            content: "How much does this cost?",
+            platform: "facebook",
+            classification: "Question",
+            scrapedAt: Date.now(),
+            platformCommentId: "fb_comment_2",
+          },
+        ],
+      });
+      await flush();
+      stored = await alice.query(api.comments.getCommentsForPost, { postId });
+      expect(stored.find((c) => c.platformCommentId === "fb_comment_2")?.autoReply).toBeUndefined();
+
+      // 3. Matching classification, but no platformCommentId (hand-entered
+      // comment) -> still never fires, nothing real to reply to.
+      await alice.mutation(api.comments.createComment, {
+        targetUrl: "https://example.com/alice-post",
+        authorName: "Manual Lead",
+        content: "I want to buy this",
+        platform: "facebook",
+        classification: "Lead",
+      });
+      await flush();
+      const ownComments = await t.run((ctx) =>
+        ctx.db
+          .query("comments")
+          .withIndex("by_userId", (q) => q.eq("userId", "alice_sub"))
+          .collect(),
+      );
+      expect(ownComments.find((c) => c.authorName === "Manual Lead")?.autoReply).toBeUndefined();
+
+      // 4. Matching classification AND a real platform comment id AND a
+      // connected account -> a reply is actually attempted. This sandbox
+      // has no GOOGLE_GENERATIVE_AI_API_KEY, so it must degrade to a
+      // recorded failure, never throw or hang.
+      await alice.mutation(api.comments.storeComments, {
+        comments: [
+          {
+            postId,
+            authorName: "Real Lead",
+            content: "I'd like a demo",
+            platform: "facebook",
+            classification: "Lead",
+            scrapedAt: Date.now(),
+            platformCommentId: "fb_comment_3",
+          },
+        ],
+      });
+      await flush();
+      stored = await alice.query(api.comments.getCommentsForPost, { postId });
+      const attempted = stored.find((c) => c.platformCommentId === "fb_comment_3");
+      expect(attempted?.autoReply?.status).toBe("failed");
+      expect(attempted?.autoReply?.error).toMatch(/GOOGLE_GENERATIVE_AI_API_KEY/i);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

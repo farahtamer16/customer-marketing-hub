@@ -19,6 +19,11 @@ export const storeComments = mutation({
         platform: v.union(v.literal("facebook"), v.literal("instagram")),
         classification: v.string(),
         scrapedAt: v.number(),
+        // Meta's own comment id — present when this came from a real
+        // Graph API fetch, absent for anything entered by hand. Required
+        // to reply to the comment later, so auto-reply only ever fires
+        // for comments that have one.
+        platformCommentId: v.optional(v.string()),
       })
     ),
   },
@@ -38,6 +43,7 @@ export const storeComments = mutation({
         content: c.content,
         platform: c.platform,
         classification: c.classification,
+        platformCommentId: c.platformCommentId,
         status: "Published",
         createdAt: c.scrapedAt,
       });
@@ -59,6 +65,13 @@ export const storeComments = mutation({
           matchedAccountName: match.accountName,
         });
       }
+
+      // Hand off to autoReply.ts rather than deciding here — this mutation
+      // can't call Gemini or the Graph API itself. No-ops instantly if the
+      // workspace hasn't opted in.
+      await ctx.scheduler.runAfter(0, internal.autoReply.maybeAutoReply, {
+        commentId,
+      });
     }
   },
 });
@@ -299,5 +312,33 @@ export const deleteCommentAdmin = mutation({
     if (!comment) throw new Error("Comment not found");
     requireInWorkspace(actor, comment);
     await ctx.db.delete(args.commentId);
+  },
+});
+
+// Internal-only: autoReply.ts runs off a scheduled job with no signed-in
+// caller, so it can't go through the identity-gated reads above.
+export const getCommentInternal = internalQuery({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.commentId);
+  },
+});
+
+export const markAutoReplyResult = internalMutation({
+  args: {
+    commentId: v.id("comments"),
+    status: v.union(v.literal("sent"), v.literal("failed")),
+    text: v.optional(v.string()),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.commentId, {
+      autoReply: {
+        status: args.status,
+        text: args.text,
+        error: args.error,
+        repliedAt: Date.now(),
+      },
+    });
   },
 });

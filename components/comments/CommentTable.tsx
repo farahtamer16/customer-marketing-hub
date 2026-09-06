@@ -117,7 +117,27 @@ export default function CommentTable({
         }),
         column.accessor("classification", {
           header: t("classification"),
-          cell: ({ getValue }) => <StatusPill value={getValue()} />,
+          cell: ({ getValue, row }) => (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusPill value={getValue()} />
+              {row.original.autoReply?.status === "sent" && (
+                <span
+                  className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.6rem] font-bold text-emerald-700"
+                  title={row.original.autoReply.text}
+                >
+                  {t("aiReplied")}
+                </span>
+              )}
+              {row.original.autoReply?.status === "failed" && (
+                <span
+                  className="rounded-full bg-rose-50 px-2 py-0.5 text-[0.6rem] font-bold text-rose-700"
+                  title={row.original.autoReply.error}
+                >
+                  {t("aiReplyFailed")}
+                </span>
+              )}
+            </div>
+          ),
         }),
         column.display({
           id: "suggestedPriority",

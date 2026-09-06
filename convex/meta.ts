@@ -615,13 +615,14 @@ export const fetchPostComments = action({
     });
     if (!credentials) throw new Error(`${post.platform} is not connected`);
 
-    const fields = post.platform === "Instagram" ? "username,text,timestamp" : "from,message,created_time";
+    const fields = post.platform === "Instagram" ? "id,username,text,timestamp" : "id,from,message,created_time";
     const data = await graphGet(`/${post.platformPostId}/comments`, {
       fields,
       access_token: credentials.accessToken,
     });
 
     const comments = (data.data ?? []).map((raw: Record<string, unknown>) => ({
+      platformCommentId: raw.id as string | undefined,
       authorName:
         post.platform === "Instagram"
           ? (raw.username as string | undefined)
@@ -632,5 +633,30 @@ export const fetchPostComments = action({
     }));
 
     return { success: true, comments };
+  },
+});
+
+// Posts a live public reply to a real Meta comment — Facebook replies are
+// themselves comments on the parent (POST /{comment-id}/comments);
+// Instagram has a dedicated replies edge. Internal only: only ever called
+// from autoReply.ts after it has already decided this reply should go
+// out, never reachable from the client directly.
+export const postCommentReply = internalAction({
+  args: {
+    platformCommentId: v.string(),
+    platform: v.union(v.literal("facebook"), v.literal("instagram")),
+    accessToken: v.string(),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const path =
+      args.platform === "instagram"
+        ? `/${args.platformCommentId}/replies`
+        : `/${args.platformCommentId}/comments`;
+    const result = await graphFetch(path, {
+      message: args.message,
+      access_token: args.accessToken,
+    });
+    return { replyId: result.id as string | undefined };
   },
 });

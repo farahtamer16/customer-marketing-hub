@@ -269,6 +269,8 @@
     "sourcePost": "Source post",
     "author": "Author",
     "knownAccount": "Known contact at {name}",
+    "aiReplied": "AI replied",
+    "aiReplyFailed": "AI reply failed",
     "comment": "Comment",
     "classification": "Classification",
     "suggestedPriority": "Suggested priority",
@@ -424,7 +426,15 @@
     "updating": "Updating task",
     "lastUpdated": "Last updated",
     "followUpWith": "Follow up with {name}",
-    "you": "You"
+    "you": "You",
+    "autoReplyTitle": "AI auto-reply",
+    "autoReplyDescription": "When a new comment matches a classification below, an AI-drafted reply is posted live to Facebook/Instagram automatically — nobody reviews it first.",
+    "autoReplyEnable": "Enable AI auto-reply",
+    "autoReplyWarning": "This posts publicly with no human review. Only turn on classifications you're comfortable letting an AI answer unsupervised.",
+    "autoReplySave": "Save",
+    "autoReplySaved": "Auto-reply settings saved.",
+    "autoReplySaveFailed": "Could not save auto-reply settings.",
+    "autoReplyLoading": "Loading auto-reply settings…"
   },
   "calendar": {
     "eyebrow": "Publishing",

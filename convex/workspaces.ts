@@ -1,6 +1,16 @@
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { requireMember, requirePermission } from "./authz";
+
+export const COMMENT_CLASSIFICATIONS = [
+  "Lead",
+  "Question",
+  "Complaint",
+  "Feedback",
+  "Engagement",
+  "Other",
+] as const;
 
 // The only way a brand-new, uninvited sign-in gets a workspace: creates a
 // real, isolated tenant and makes the caller its owner. Both sign-up paths
@@ -113,5 +123,47 @@ export const backfillDefaultWorkspace = internalMutation({
     }
 
     return { workspaceId, patched: counts };
+  },
+});
+
+const DEFAULT_AUTO_REPLY = { enabled: false, classifications: [] as string[] };
+
+// Any workspace member can see the current setting (it explains why a
+// comment might have gotten an AI reply); only manageWorkspace can change
+// it — same tier as other workspace-wide toggles, not a per-team setting.
+export const getAutoReplySettings = query({
+  handler: async (ctx) => {
+    const actor = await requireMember(ctx);
+    const workspace = await ctx.db.get(actor.workspaceId);
+    return workspace?.autoReply ?? DEFAULT_AUTO_REPLY;
+  },
+});
+
+export const updateAutoReplySettings = mutation({
+  args: {
+    enabled: v.boolean(),
+    classifications: v.array(
+      v.union(...COMMENT_CLASSIFICATIONS.map((value) => v.literal(value))),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "manageWorkspace");
+    // De-dupe defensively — a duplicate entry would just mean the same
+    // classification check runs twice for no reason, not a real bug, but
+    // there's no reason to store it that way.
+    const classifications = Array.from(new Set(args.classifications));
+    await ctx.db.patch(actor.workspaceId, {
+      autoReply: { enabled: args.enabled, classifications },
+    });
+  },
+});
+
+// Internal-only: no identity in autoReply.ts's system-triggered context
+// (it runs off a comment being stored, not a signed-in request).
+export const getAutoReplySettingsInternal = internalQuery({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.workspaceId);
+    return workspace?.autoReply ?? DEFAULT_AUTO_REPLY;
   },
 });
