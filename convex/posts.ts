@@ -410,7 +410,31 @@ export const updatePostUrl = internalMutation({
   },
 });
 
+// Readable by anyone in the same workspace as the post (not just its
+// author) — matches Content Studio's cross-teammate visibility, same
+// shape as analytics.ts's assertPostReadableByCaller. This used to have
+// no check at all: any signed-in caller could read any post, in any
+// workspace, just by knowing or guessing its id.
 export const getPost = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const post = await ctx.db.get(args.postId);
+    if (!post) return null;
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    if (!self || post.workspaceId !== self.workspaceId) return null;
+    return post;
+  },
+});
+
+// Internal-only equivalent with no identity check at all — for the cron
+// pipeline (meta.publishScheduledPost), which runs as a scheduled action
+// with no signed-in caller to check.
+export const getPostInternal = internalQuery({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.postId);

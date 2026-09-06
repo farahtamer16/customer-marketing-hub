@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@clerk/backend": "^3.16.3",
@@ -26,16 +27,19 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.5.4",
+    "convex-test": "^0.0.56",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "nodemon": "^3.1.14",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }

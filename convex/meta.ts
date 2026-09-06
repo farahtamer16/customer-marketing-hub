@@ -261,7 +261,7 @@ export const publishInstagramPostAs = internalAction({
 export const publishScheduledPost = internalAction({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    const post = await ctx.runQuery(api.posts.getPost, { postId: args.postId });
+    const post = await ctx.runQuery(internal.posts.getPostInternal, { postId: args.postId });
     if (!post || post.status !== "Processing") return;
 
     try {
