@@ -5,10 +5,10 @@ import {
   Circle,
   Clock3,
   ListChecks,
-  Loader2,
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import PageHeader from "@/components/hub/PageHeader";
+import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import AutoReplySettings from "./AutoReplySettings";
@@ -46,7 +46,7 @@ export default function TaskList() {
       <AutoReplySettings />
 
       {user === undefined || (user && tasks === undefined) ? (
-        <LoadingState />
+        <LoadingState label={t("loading")} />
       ) : !user ? (
         <EmptyState
           title={t("unavailableTitle")}
@@ -96,16 +96,6 @@ export default function TaskList() {
         </section>
       )}
     </>
-  );
-}
-
-function LoadingState() {
-  const t = useTranslations("tasks");
-  return (
-    <div className="glass-card flex min-h-64 items-center justify-center rounded-3xl text-sm text-slate-500">
-      <Loader2 size={18} className="me-2 animate-spin" />
-      {t("loading")}
-    </div>
   );
 }
 

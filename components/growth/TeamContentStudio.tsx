@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Eye,
   Heart,
+  Loader2,
   MessageCircleMore,
   Plus,
   RotateCcw,
@@ -20,10 +21,20 @@ import {
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
+import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { navIcons } from "@/lib/nav-icons";
 import { DemoModeBanner } from "./GrowthPrimitives";
+
+function InlineLoading({ label }: { label: string }) {
+  return (
+    <p className="flex items-center justify-center gap-2 px-6 py-8 text-center text-sm text-slate-500">
+      <Loader2 size={16} className="animate-spin" />
+      {label}
+    </p>
+  );
+}
 
 const TABS = ["posts", "calendar", "comments", "analytics"] as const;
 export type StudioTab = (typeof TABS)[number];
@@ -115,7 +126,7 @@ function PostsTab({ teamId }: { teamId: Id<"teams"> | null }) {
         </Link>
       </div>
       {!posts ? (
-        <p className="px-6 py-8 text-center text-sm text-slate-500">{t("loading")}</p>
+        <InlineLoading label={t("loading")} />
       ) : posts.data.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-slate-500">{t("postsEmpty")}</p>
       ) : (
@@ -272,7 +283,7 @@ function CommentsTab({ teamId }: { teamId: Id<"teams"> | null }) {
   return (
     <section className="glass-card overflow-hidden rounded-3xl">
       {!comments ? (
-        <p className="px-6 py-8 text-center text-sm text-slate-500">{t("loading")}</p>
+        <InlineLoading label={t("loading")} />
       ) : comments.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-slate-500">{t("commentsEmpty")}</p>
       ) : (
@@ -316,11 +327,7 @@ function AnalyticsTab({ teamId }: { teamId: Id<"teams"> | null }) {
   const overview = useQuery(api.analytics.getOverviewForTeamAdmin, { teamId: teamId ?? undefined });
 
   if (!overview) {
-    return (
-      <section className="glass-card rounded-3xl p-6">
-        <p className="text-center text-sm text-slate-500">{t("loading")}</p>
-      </section>
-    );
+    return <LoadingState label={t("loading")} />;
   }
 
   const metrics = [
@@ -366,11 +373,7 @@ function CalendarTab({ teamId }: { teamId: Id<"teams"> | null }) {
   });
 
   if (!posts) {
-    return (
-      <section className="glass-card rounded-3xl p-6">
-        <p className="text-center text-sm text-slate-500">{t("loading")}</p>
-      </section>
-    );
+    return <LoadingState label={t("loading")} />;
   }
 
   const year = visibleMonth.getFullYear();

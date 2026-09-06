@@ -4,7 +4,6 @@ import { useUser } from "@clerk/nextjs";
 import {
   Eye,
   Heart,
-  Loader2,
   MessageCircleMore,
   Share2,
   TrendingUp,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import PageHeader from "@/components/hub/PageHeader";
+import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import BestPostingTimes from "@/components/analytics/BestPostingTimes";
@@ -49,7 +49,7 @@ export default function AnalyticsOverview() {
       />
 
       {!isLoaded || (user && (overview === undefined || posts === undefined)) ? (
-        <LoadingState />
+        <LoadingState label={t("loading")} />
       ) : !user ? (
         <MessageState
           title={t("unavailableTitle")}
@@ -167,16 +167,6 @@ function AnalyticsContent({
       <Chart rows={rows} />
       <PostAnalytics rows={rows} />
     </>
-  );
-}
-
-function LoadingState() {
-  const t = useTranslations("analytics");
-  return (
-    <div className="glass-card flex min-h-64 items-center justify-center rounded-3xl text-sm text-slate-500">
-      <Loader2 size={18} className="mr-2 animate-spin" />
-      {t("loading")}
-    </div>
   );
 }
 

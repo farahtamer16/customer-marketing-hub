@@ -3,9 +3,10 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
-import { Loader2, MessageCircleMore, Plus } from "lucide-react";
+import { MessageCircleMore, Plus } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/hub/PageHeader";
+import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import CommentTable from "./CommentTable";
@@ -97,10 +98,7 @@ export default function CommentList({
         />
       )}
       {user === undefined || (user && tasks === undefined) ? (
-        <div className="glass-card flex min-h-64 items-center justify-center rounded-3xl text-sm text-slate-500">
-          <Loader2 size={18} className="mr-2 animate-spin" />
-          {t("loading")}
-        </div>
+        <LoadingState label={t("loading")} />
       ) : !comments.length ? (
         <div className="glass-card flex min-h-64 flex-col items-center justify-center rounded-3xl px-6 text-center">
           <MessageCircleMore className="text-[#3556d9]" />

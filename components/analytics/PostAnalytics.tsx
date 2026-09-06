@@ -7,7 +7,6 @@ import {
   Clock3,
   Eye,
   Heart,
-  Loader2,
   MessageCircleMore,
   RefreshCw,
   Share2,
@@ -17,6 +16,7 @@ import {
   Users,
   Wand2,
 } from "lucide-react";
+import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { usePostAnalytics } from "@/hooks/usePostAnalytics";
@@ -95,12 +95,7 @@ export function PostAnalytics({ postId, userId, isOwnPost }: PostAnalyticsProps)
   };
 
   if (isInitialLoading) {
-    return (
-      <div className="glass-card flex min-h-72 items-center justify-center rounded-3xl text-sm text-slate-500">
-        <Loader2 className="me-2 animate-spin" size={18} />
-        {t("loadingLatest")}
-      </div>
-    );
+    return <LoadingState label={t("loadingLatest")} />;
   }
 
   const engagementRate =

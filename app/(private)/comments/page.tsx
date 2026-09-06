@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import CommentList from "@/components/comments/CommentList";
+import LoadingState from "@/components/ui/LoadingState";
 import { useTranslations } from "next-intl";
 
 export default function CommentsPage() {
@@ -21,7 +22,7 @@ export default function CommentsPage() {
   );
 
   if (comments === undefined || posts === undefined) {
-    return <div className="p-8 text-gray-500">{t("loading")}</div>;
+    return <LoadingState label={t("loading")} />;
   }
 
   return <CommentList comments={comments} posts={posts} />;

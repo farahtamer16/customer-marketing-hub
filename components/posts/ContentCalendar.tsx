@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import PageHeader from "@/components/hub/PageHeader";
+import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 
@@ -24,12 +25,7 @@ export default function ContentCalendar() {
   });
 
   if (!isLoaded || (user && posts === undefined)) {
-    return (
-      <div className="glass-card flex min-h-64 items-center justify-center rounded-3xl text-sm text-slate-500">
-        <Loader2 size={18} className="me-2 animate-spin" />
-        {t("loading")}
-      </div>
-    );
+    return <LoadingState label={t("loading")} />;
   }
 
   const year = visibleMonth.getFullYear();

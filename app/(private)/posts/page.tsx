@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import PostList from "@/components/posts/PostList";
+import LoadingState from "@/components/ui/LoadingState";
 import { useTranslations } from "next-intl";
 
 export default function PostsPage() {
@@ -17,7 +18,7 @@ export default function PostsPage() {
   );
 
   if (posts === undefined) {
-    return <div className="p-8 text-gray-500">{t("loading")}</div>;
+    return <LoadingState label={t("loading")} />;
   }
 
   return <PostList posts={posts} />;

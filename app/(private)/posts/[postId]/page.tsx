@@ -3,11 +3,11 @@
 import { useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import PostDetail from "@/components/posts/PostDetail";
+import LoadingState from "@/components/ui/LoadingState";
 
 export default function PostDetailPage() {
   const t = useTranslations("posts");
@@ -23,12 +23,7 @@ export default function PostDetailPage() {
   const comments = useQuery(api.comments.getCommentsForPost, { postId: id });
 
   if (!isLoaded || post === undefined || comments === undefined) {
-    return (
-      <div className="glass-card flex min-h-64 items-center justify-center rounded-3xl text-sm text-slate-500">
-        <Loader2 className="me-2 animate-spin" size={18} />
-        {t("loadingDetail")}
-      </div>
-    );
+    return <LoadingState label={t("loadingDetail")} />;
   }
 
   if (!user || !post) {
