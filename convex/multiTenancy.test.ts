@@ -491,3 +491,57 @@ describe("teams.sendInviteEmail", () => {
     expect(result.error).toMatch(/RESEND_API_KEY/i);
   });
 });
+
+describe("consumerJourney.ts vendor-admin gate (the permission leak fix)", () => {
+  test("a tenant ownerAdmin cannot see Spiders AI's own funnel/leads; a real vendor admin can", async () => {
+    const t = convexTest(schema);
+    const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+    await alice.mutation(api.workspaces.createWorkspace, { name: "A", intent: "workspace" });
+
+    // Some real landing-page activity to make sure there's something to leak.
+    await t.mutation(api.consumerJourney.recordVisit, { visitorId: "v1" });
+    await t.mutation(api.consumerJourney.captureLead, {
+      visitorId: "v1",
+      email: "lead@prospect.com",
+    });
+
+    // Alice is ownerAdmin of her own workspace — full tenant permissions,
+    // including viewExecutiveAnalytics — but that must not extend to
+    // Spiders AI's own consumer funnel/leads.
+    await expect(alice.query(api.consumerJourney.listFunnel, {})).rejects.toThrow(
+      /not authorized/i,
+    );
+    await expect(alice.query(api.consumerJourney.listCapturedLeads, {})).rejects.toThrow(
+      /not authorized/i,
+    );
+    expect(await alice.query(api.users.amIVendorAdmin, {})).toBe(false);
+
+    // A real vendor admin (bootstrapped via the internal grant mutation,
+    // not any workspace membership at all) can see it.
+    const vendorPerson = t.withIdentity(
+      identity("vendor_sub", "vendor@spiders.ai", "Vendor Staff"),
+    );
+    await vendorPerson.mutation(api.users.getOrCreate, {});
+    await t.mutation(internal.users.grantVendorAdmin, { email: "vendor@spiders.ai" });
+
+    expect(await vendorPerson.query(api.users.amIVendorAdmin, {})).toBe(true);
+    const funnel = await vendorPerson.query(api.consumerJourney.listFunnel, {});
+    expect(funnel.firstVisit).toBeGreaterThanOrEqual(0);
+    const leads = await vendorPerson.query(api.consumerJourney.listCapturedLeads, {});
+    expect(leads.some((l) => l.email === "lead@prospect.com")).toBe(true);
+
+    // Revoking actually takes it away again.
+    await t.mutation(internal.users.revokeVendorAdmin, { email: "vendor@spiders.ai" });
+    await expect(vendorPerson.query(api.consumerJourney.listFunnel, {})).rejects.toThrow(
+      /not authorized/i,
+    );
+  });
+
+  test("an unauthenticated caller is refused, not just an unprivileged one", async () => {
+    const t = convexTest(schema);
+    await expect(t.query(api.consumerJourney.listFunnel, {})).rejects.toThrow(
+      /not authenticated/i,
+    );
+    expect(await t.query(api.users.amIVendorAdmin, {})).toBe(false);
+  });
+});

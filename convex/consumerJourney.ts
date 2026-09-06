@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requirePermission } from "./authz";
+import { requireVendorAdmin } from "./authz";
 
 // visitorId is a browser-generated id (see hooks/useVisitorId.ts), stored
 // in localStorage on the public landing page — this is anonymous tracking
@@ -124,10 +124,13 @@ export const captureLead = mutation({
 });
 
 // The real, actionable output of the opt-in above — an actual email list
-// the team can see and follow up with, not just a funnel count.
+// the Spiders AI team can see and follow up with, not just a funnel
+// count. Vendor-only: this is Spiders AI's own landing-page lead list,
+// not tenant CRM data — used to leak to any tenant's CMO/ownerAdmin via
+// the shared viewExecutiveAnalytics permission before this fix.
 export const listCapturedLeads = query({
   handler: async (ctx) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
+    await requireVendorAdmin(ctx);
     const visitors = await ctx.db.query("consumerVisitors").collect();
     return visitors
       .filter((visitor) => visitor.email && visitor.emailCapturedAt)
@@ -144,10 +147,11 @@ export const listCapturedLeads = query({
 // Each visitor is bucketed into the furthest stage they've genuinely
 // reached — activation and retention aren't stored flags, they're read
 // straight off real published-post counts so they can't drift out of sync
-// with what actually happened.
+// with what actually happened. Vendor-only, same reasoning as
+// listCapturedLeads above.
 export const listFunnel = query({
   handler: async (ctx) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
+    await requireVendorAdmin(ctx);
     const visitors = await ctx.db.query("consumerVisitors").collect();
     const posts = await ctx.db.query("posts").collect();
     const publishedCountByUser = new Map<string, number>();

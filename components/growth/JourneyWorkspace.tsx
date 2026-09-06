@@ -35,6 +35,11 @@ const EMPTY_ACCOUNTS: GrowthAccount[] = [];
 export default function JourneyWorkspace() {
   const t = useTranslations("growth");
   const [mode, setMode] = useState<"b2b" | "consumer">("b2b");
+  // The "Consumer" tab is Spiders AI's own landing-page funnel/leads, not
+  // this workspace's data — only ever shown to actual Spiders AI staff,
+  // never to a tenant, however senior their role in their own workspace.
+  const isVendorAdmin = useQuery(api.users.amIVendorAdmin) ?? false;
+  const visibleModes = isVendorAdmin ? (["b2b", "consumer"] as const) : (["b2b"] as const);
   const growthAccounts = (useQuery(api.growth.listAccounts, {}) ??
     EMPTY_ACCOUNTS) as GrowthAccount[];
   // These two cards recommend a concrete next action, so they link to a
@@ -61,7 +66,7 @@ export default function JourneyWorkspace() {
       <section className="glass-card rounded-3xl p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex rounded-2xl bg-slate-100 p-1">
-            {(["b2b", "consumer"] as const).map((value) => (
+            {visibleModes.map((value) => (
               <button
                 key={value}
                 type="button"
@@ -89,20 +94,20 @@ export default function JourneyWorkspace() {
             </span>
             <div>
               <h2 className="font-semibold text-[#071e55]">
-                {mode === "b2b"
-                  ? t("journeys.b2bTitle")
-                  : t("journeys.consumerTitle")}
+                {mode === "consumer" && isVendorAdmin
+                  ? t("journeys.consumerTitle")
+                  : t("journeys.b2bTitle")}
               </h2>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
-                {mode === "b2b"
-                  ? t("journeys.b2bExplanation")
-                  : t("journeys.consumerExplanation")}
+                {mode === "consumer" && isVendorAdmin
+                  ? t("journeys.consumerExplanation")
+                  : t("journeys.b2bExplanation")}
               </p>
             </div>
           </div>
         </div>
 
-        {mode === "b2b" ? <B2BJourney /> : <ConsumerJourney />}
+        {mode === "consumer" && isVendorAdmin ? <ConsumerJourney /> : <B2BJourney />}
       </section>
 
       <section className="mt-6 grid gap-6 lg:grid-cols-2">

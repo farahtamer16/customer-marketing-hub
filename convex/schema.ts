@@ -18,6 +18,11 @@ export default defineSchema({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     createdAt: v.number(),
+    // Spiders AI's own staff, not a tenant role — grants visibility into
+    // the vendor's own landing-page funnel/leads in consumerJourney.ts.
+    // Never set by anything reachable from the client; only ever flipped
+    // by users.grantVendorAdmin, run once via the Convex CLI.
+    isVendorAdmin: v.optional(v.boolean()),
   }).index("by_clerkUserId", ["clerkUserId"]),
 
 

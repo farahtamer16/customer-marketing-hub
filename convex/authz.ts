@@ -95,3 +95,26 @@ export function requireInWorkspace(
     throw new Error("Not found");
   }
 }
+
+// Gates data that belongs to Spiders AI itself, not to any tenant —
+// today just consumerJourney.ts's landing-page funnel/leads. Deliberately
+// separate from requirePermission: a tenant's ownerAdmin/cmo has every
+// tenant permission there is, but that's permission over their own
+// workspace, not over the vendor's own business data. isVendorAdmin lives
+// on the global `users` table (one row per Clerk identity, no workspace
+// concept) since this is orthogonal to which workspace someone is in —
+// most vendor staff won't be in any tenant workspace at all.
+export async function requireVendorAdmin(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+    .unique();
+  if (!user?.isVendorAdmin) {
+    throw new Error("Not authorized");
+  }
+
+  return user;
+}
