@@ -85,16 +85,12 @@ export async function requireMember(ctx: QueryCtx | MutationCtx) {
 // requireMember) only ever ask "can this person do this kind of thing,"
 // never "does this specific document belong to them." Without this, an
 // ownerAdmin in one workspace could pass another workspace's document id
-// and silently read or mutate it. `doc.workspaceId` is `undefined` only
-// for rows created before the multi-tenancy migration backfilled every
-// row — treated as "not yet scoped, allow" during that transition rather
-// than a hard failure; once the backfill completes and the field is
-// required, this branch never triggers.
+// and silently read or mutate it.
 export function requireInWorkspace(
   member: Doc<"teamMembers">,
-  doc: { workspaceId?: Id<"workspaces"> },
+  doc: { workspaceId: Id<"workspaces"> },
 ) {
-  if (doc.workspaceId && doc.workspaceId !== member.workspaceId) {
+  if (doc.workspaceId !== member.workspaceId) {
     // Don't leak that the other workspace's document exists at all.
     throw new Error("Not found");
   }

@@ -80,13 +80,11 @@ export const listAccounts = query({
         .query("growthAccounts")
         .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
         .collect();
-    } else if (actor.workspaceId) {
+    } else {
       accounts = await ctx.db
         .query("growthAccounts")
         .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
         .collect();
-    } else {
-      accounts = await ctx.db.query("growthAccounts").collect();
     }
     return accounts.map(toAccount);
   },
@@ -122,12 +120,10 @@ export const getScoreBreakdown = query({
 export const listLeads = query({
   handler: async (ctx) => {
     const actor = await requirePermission(ctx, "viewExecutiveAnalytics");
-    const accounts = actor.workspaceId
-      ? await ctx.db
-          .query("growthAccounts")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("growthAccounts").collect();
+    const accounts = await ctx.db
+      .query("growthAccounts")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
     return accounts.flatMap((account) =>
       account.members
         .filter((member) => member.status !== "missing")
@@ -212,12 +208,10 @@ export const estimateOutcomes = query({
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "manageLeads");
 
-    const accounts = actor.workspaceId
-      ? await ctx.db
-          .query("growthAccounts")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("growthAccounts").collect();
+    const accounts = await ctx.db
+      .query("growthAccounts")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
     const closedWon = accounts.filter(
       (account) => account.stage === "customer" || account.stage === "renewal",
     );
@@ -429,13 +423,16 @@ export const logProductSignal = internalMutation({
   handler: async (ctx, args) => {
     const domain = args.email.split("@")[1]?.toLowerCase().trim();
     if (!domain) return;
+    // No workspace to attribute this signal to (e.g. a not-yet-onboarded
+    // sign-in with no teamMembers row yet) — never fall back to scanning
+    // every workspace's accounts, that would be a real cross-tenant leak.
+    const workspaceId = args.workspaceId;
+    if (!workspaceId) return;
 
-    const accounts = args.workspaceId
-      ? await ctx.db
-          .query("growthAccounts")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", args.workspaceId))
-          .collect()
-      : await ctx.db.query("growthAccounts").collect();
+    const accounts = await ctx.db
+      .query("growthAccounts")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
     const matches = accounts.filter(
       (account) => account.domain.toLowerCase().trim() === domain,
     );
@@ -488,13 +485,15 @@ export const logSocialSignalForCommenter = internalMutation({
     if (args.classification !== "Lead" && args.classification !== "Question") return null;
     const name = args.authorName.trim().toLowerCase();
     if (!name) return null;
+    // Same rule as logProductSignal: no workspace to scope to means no
+    // match, never a global scan across every tenant's accounts.
+    const workspaceId = args.workspaceId;
+    if (!workspaceId) return null;
 
-    const accounts = args.workspaceId
-      ? await ctx.db
-          .query("growthAccounts")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", args.workspaceId))
-          .collect()
-      : await ctx.db.query("growthAccounts").collect();
+    const accounts = await ctx.db
+      .query("growthAccounts")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
     const matches = accounts.filter((account) =>
       account.members.some(
         (member) =>

@@ -19,7 +19,7 @@ async function assertPostReadableByCaller(ctx: QueryCtx, postId: Id<"posts">) {
     .query("teamMembers")
     .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
     .unique();
-  if (self?.workspaceId && post.workspaceId && post.workspaceId !== self.workspaceId) {
+  if (!self || post.workspaceId !== self.workspaceId) {
     return null;
   }
   return post;
@@ -55,10 +55,11 @@ export const recordAnalytics = internalMutation({
   },
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
     const id = await ctx.db.insert("analytics", {
       postId: args.postId,
       userId: args.userId,
-      workspaceId: post?.workspaceId,
+      workspaceId: post.workspaceId,
       platform: args.platform,
       likes: args.likes,
       comments: args.comments,
@@ -170,23 +171,18 @@ async function overviewForTeamId(
   teamId: Id<"teams"> | undefined,
   platform: string | undefined,
   days: number | undefined,
-  workspaceId: Id<"workspaces"> | undefined,
+  workspaceId: Id<"workspaces">,
 ) {
   const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
-  let members;
-  if (teamId) {
-    members = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
-      .collect();
-  } else if (workspaceId) {
-    members = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-  } else {
-    members = await ctx.db.query("teamMembers").collect();
-  }
+  const members = teamId
+    ? await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+        .collect()
+    : await ctx.db
+        .query("teamMembers")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+        .collect();
   const linked = members.filter(
     (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
   );
@@ -344,22 +340,17 @@ async function postsWithAnalyticsForTeamId(
   teamId: Id<"teams"> | undefined,
   platform: string | undefined,
   status: string | undefined,
-  workspaceId: Id<"workspaces"> | undefined,
+  workspaceId: Id<"workspaces">,
 ) {
-  let members;
-  if (teamId) {
-    members = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
-      .collect();
-  } else if (workspaceId) {
-    members = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-  } else {
-    members = await ctx.db.query("teamMembers").collect();
-  }
+  const members = teamId
+    ? await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+        .collect()
+    : await ctx.db
+        .query("teamMembers")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+        .collect();
   const linked = members.filter(
     (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
   );

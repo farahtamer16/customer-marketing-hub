@@ -32,9 +32,10 @@ export const logSent = internalMutation({
   },
   handler: async (ctx, args) => {
     const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
     await ctx.db.insert("outreachEmails", {
       ...args,
-      workspaceId: account?.workspaceId,
+      workspaceId: account.workspaceId,
       sentAt: Date.now(),
     });
   },

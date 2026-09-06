@@ -10,12 +10,11 @@ export const listSteps = query({
       .query("teamMembers")
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
       .unique();
-    const steps = self?.workspaceId
-      ? await ctx.db
-          .query("journeySteps")
-          .withIndex("by_workspaceId_stage", (q) => q.eq("workspaceId", self.workspaceId))
-          .collect()
-      : await ctx.db.query("journeySteps").collect();
+    if (!self) return [];
+    const steps = await ctx.db
+      .query("journeySteps")
+      .withIndex("by_workspaceId_stage", (q) => q.eq("workspaceId", self.workspaceId))
+      .collect();
     return steps.map((step) => ({
       stage: step.stage,
       owner: step.owner,
@@ -38,17 +37,12 @@ export const setStepCompleted = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "manageWorkspace");
-    const step = actor.workspaceId
-      ? await ctx.db
-          .query("journeySteps")
-          .withIndex("by_workspaceId_stage", (q) =>
-            q.eq("workspaceId", actor.workspaceId).eq("stage", args.stage),
-          )
-          .unique()
-      : await ctx.db
-          .query("journeySteps")
-          .withIndex("by_stage", (q) => q.eq("stage", args.stage))
-          .unique();
+    const step = await ctx.db
+      .query("journeySteps")
+      .withIndex("by_workspaceId_stage", (q) =>
+        q.eq("workspaceId", actor.workspaceId).eq("stage", args.stage),
+      )
+      .unique();
     if (!step) throw new Error("Journey step not found");
     await ctx.db.patch(step._id, {
       completed: args.completed,

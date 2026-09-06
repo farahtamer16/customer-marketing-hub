@@ -27,10 +27,11 @@ export const recordPublishedPost = internalMutation({
       .query("teamMembers")
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
       .unique();
+    if (!publisher) throw new Error("You are not a member of this workspace yet");
 
     const id = await ctx.db.insert("posts", {
       userId: args.userId,
-      workspaceId: publisher?.workspaceId,
+      workspaceId: publisher.workspaceId,
       platform: args.platform,
       content: args.content,
       mediaUrl: args.mediaUrl,
@@ -45,7 +46,7 @@ export const recordPublishedPost = internalMutation({
     // track as a growth account (matched by email domain), log it as a
     // real product-usage signal instead of adoption only moving when
     // someone remembers to log it by hand.
-    if (publisher?.email) {
+    if (publisher.email) {
       await ctx.runMutation(internal.growth.logProductSignal, {
         email: publisher.email,
         kind: "postCreated",
@@ -92,13 +93,10 @@ export const schedulePost = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const self = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
-      .unique();
+    const self = await requireMember(ctx);
     const id = await ctx.db.insert("posts", {
       userId: identity.subject,
-      workspaceId: self?.workspaceId,
+      workspaceId: self.workspaceId,
       platform: args.platform,
       content: args.content,
       mediaUrl: args.mediaUrl,
@@ -167,12 +165,10 @@ export const getPostsForTeamAdmin = query({
           .query("teamMembers")
           .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
           .collect()
-      : actor.workspaceId
-        ? await ctx.db
-            .query("teamMembers")
-            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-            .collect()
-        : await ctx.db.query("teamMembers").collect();
+      : await ctx.db
+          .query("teamMembers")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect();
     const linked = members.filter(
       (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
     );
@@ -208,14 +204,13 @@ export const getPostsForUserInternal = internalQuery({
 export const listPublished = query({
   handler: async (ctx) => {
     const actor = await requireMember(ctx);
-    const posts = await ctx.db
+    return await ctx.db
       .query("posts")
-      .withIndex("by_status", (q) => q.eq("status", "Published"))
+      .withIndex("by_workspaceId_status", (q) =>
+        q.eq("workspaceId", actor.workspaceId).eq("status", "Published"),
+      )
       .order("desc")
       .collect();
-    return actor.workspaceId
-      ? posts.filter((post) => !post.workspaceId || post.workspaceId === actor.workspaceId)
-      : posts;
   },
 });
 

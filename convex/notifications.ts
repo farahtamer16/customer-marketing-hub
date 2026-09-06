@@ -1,11 +1,15 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireInWorkspace, requireMember } from "./authz";
 
+// Any workspace member can see their own workspace's activity feed — same
+// membership-only gate as approvals.listPosts, not a specific permission.
 export const listNotifications = query({
   handler: async (ctx) => {
+    const actor = await requireMember(ctx);
     const notifications = await ctx.db
       .query("workspaceNotifications")
-      .withIndex("by_occurredAt")
+      .withIndex("by_workspaceId_occurredAt", (q) => q.eq("workspaceId", actor.workspaceId))
       .order("desc")
       .collect();
     return notifications.map((n) => ({ id: n._id, ...n }));
@@ -15,14 +19,20 @@ export const listNotifications = query({
 export const markRead = mutation({
   args: { notificationId: v.id("workspaceNotifications") },
   handler: async (ctx, args) => {
+    const actor = await requireMember(ctx);
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification) throw new Error("Notification not found");
+    requireInWorkspace(actor, notification);
     await ctx.db.patch(args.notificationId, { read: true });
   },
 });
 
 export const markAllRead = mutation({
   handler: async (ctx) => {
+    const actor = await requireMember(ctx);
     const notifications = await ctx.db
       .query("workspaceNotifications")
+      .withIndex("by_workspaceId_occurredAt", (q) => q.eq("workspaceId", actor.workspaceId))
       .filter((q) => q.eq(q.field("read"), false))
       .collect();
     for (const notification of notifications) {
@@ -44,8 +54,10 @@ export const createNotification = mutation({
     href: v.string(),
   },
   handler: async (ctx, args) => {
+    const actor = await requireMember(ctx);
     return await ctx.db.insert("workspaceNotifications", {
       ...args,
+      workspaceId: actor.workspaceId,
       occurredAt: Date.now(),
       read: false,
     });

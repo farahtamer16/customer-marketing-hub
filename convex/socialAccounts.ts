@@ -103,8 +103,14 @@ export const connectMetaAccount = mutation({
       await ctx.db.patch(existing._id, patch);
       return existing._id;
     }
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", userId))
+      .unique();
+    if (!self) throw new Error("You are not a member of this workspace yet");
     return await ctx.db.insert("socialAccounts", {
       userId,
+      workspaceId: self.workspaceId,
       platform: args.platform,
       createdAt: Date.now(),
       ...patch,

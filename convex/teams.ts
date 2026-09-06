@@ -54,12 +54,10 @@ export const createTeam = mutation({
 export const listTeamNames = query({
   handler: async (ctx) => {
     const actor = await requireMember(ctx);
-    const teams = actor.workspaceId
-      ? await ctx.db
-          .query("teams")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("teams").collect();
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
     return teams.map((team) => ({ id: team._id, name: team.name }));
   },
 });
@@ -67,18 +65,14 @@ export const listTeamNames = query({
 export const listTeams = query({
   handler: async (ctx) => {
     const actor = await requirePermission(ctx, "manageTeam");
-    const teams = actor.workspaceId
-      ? await ctx.db
-          .query("teams")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("teams").collect();
-    const members = actor.workspaceId
-      ? await ctx.db
-          .query("teamMembers")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("teamMembers").collect();
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
+    const members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
     return teams.map((team) => ({
       id: team._id,
       name: team.name,
@@ -96,31 +90,24 @@ export const getTeamPerformance = query({
   handler: async (ctx) => {
     const actor = await requirePermission(ctx, "manageTeam");
     const wsId = actor.workspaceId;
-    const [teamsList, members, accounts, campaigns] = wsId
-      ? await Promise.all([
-          ctx.db
-            .query("teams")
-            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
-            .collect(),
-          ctx.db
-            .query("teamMembers")
-            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
-            .collect(),
-          ctx.db
-            .query("growthAccounts")
-            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
-            .collect(),
-          ctx.db
-            .query("campaigns")
-            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
-            .collect(),
-        ])
-      : await Promise.all([
-          ctx.db.query("teams").collect(),
-          ctx.db.query("teamMembers").collect(),
-          ctx.db.query("growthAccounts").collect(),
-          ctx.db.query("campaigns").collect(),
-        ]);
+    const [teamsList, members, accounts, campaigns] = await Promise.all([
+      ctx.db
+        .query("teams")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+        .collect(),
+      ctx.db
+        .query("teamMembers")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+        .collect(),
+      ctx.db
+        .query("growthAccounts")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+        .collect(),
+      ctx.db
+        .query("campaigns")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+        .collect(),
+    ]);
 
     const rollupFor = (teamId: (typeof teamsList)[number]["_id"] | undefined) => {
       const teamAccounts = accounts.filter((a) => a.teamId === teamId);
@@ -263,13 +250,11 @@ export const listMembersByTeam = query({
         .query("teamMembers")
         .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
         .collect();
-    } else if (actor.workspaceId) {
+    } else {
       members = await ctx.db
         .query("teamMembers")
         .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
         .collect();
-    } else {
-      members = await ctx.db.query("teamMembers").collect();
     }
     return members.map((member) => ({
       id: member._id,

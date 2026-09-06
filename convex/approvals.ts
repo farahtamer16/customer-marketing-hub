@@ -16,12 +16,10 @@ export const listPosts = query({
     // Any workspace member can be assigned an approval step regardless of
     // role, so this only checks membership, not a specific permission.
     const actor = await requireMember(ctx);
-    const posts = actor.workspaceId
-      ? await ctx.db
-          .query("approvalPosts")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("approvalPosts").collect();
+    const posts = await ctx.db
+      .query("approvalPosts")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
     return posts.map((post) => ({ id: post._id, ...post }));
   },
 });

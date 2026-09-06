@@ -20,12 +20,10 @@ const dashboardRoleByWorkspaceRole = {
 export const listMembers = query({
   handler: async (ctx) => {
     const actor = await requirePermission(ctx, "manageTeam");
-    const members = actor.workspaceId
-      ? await ctx.db
-          .query("teamMembers")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
-          .collect()
-      : await ctx.db.query("teamMembers").collect();
+    const members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
     return members.map((member) => ({
       id: member._id,
       name: member.name,
@@ -134,16 +132,11 @@ export const getWorkspaceOwner = query({
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
       .unique();
     if (!self) return null;
-    const owner = self.workspaceId
-      ? await ctx.db
-          .query("teamMembers")
-          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", self.workspaceId))
-          .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
-          .first()
-      : await ctx.db
-          .query("teamMembers")
-          .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
-          .first();
+    const owner = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", self.workspaceId))
+      .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
+      .first();
     if (!owner) return null;
     return { name: owner.name, email: owner.email };
   },

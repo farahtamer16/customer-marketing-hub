@@ -68,13 +68,11 @@ export const listCampaigns = query({
         .query("campaigns")
         .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
         .collect();
-    } else if (actor.workspaceId) {
+    } else {
       campaigns = await ctx.db
         .query("campaigns")
         .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
         .collect();
-    } else {
-      campaigns = await ctx.db.query("campaigns").collect();
     }
     return await Promise.all(
       campaigns.map(async (campaign) => {
