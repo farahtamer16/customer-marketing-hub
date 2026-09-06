@@ -177,6 +177,23 @@ export const getMyRole = query({
   },
 });
 
+// The caller's actual workspace role (ownerAdmin/cmo/marketingManager/
+// socialMediaUser) — distinct from getMyRole above, which can be
+// overridden by dashboardHint for routing purposes and so isn't safe to
+// use anywhere that needs the real permission-bearing role, like
+// highlighting "you" in the Team & Access permission matrix.
+export const getMyWorkspaceRole = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const member = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    return member?.role ?? null;
+  },
+});
+
 export const updateMemberRole = mutation({
   args: { memberId: v.id("teamMembers"), role: workspaceRole },
   handler: async (ctx, args) => {

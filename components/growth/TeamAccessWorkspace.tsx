@@ -43,6 +43,7 @@ export default function TeamAccessWorkspace() {
   const members = (useQuery(api.teams.listMembersByTeam, {}) ??
     EMPTY_MEMBERS) as WorkspaceMember[];
   const teams = useQuery(api.teams.listTeams) ?? EMPTY_TEAMS;
+  const myRole = useQuery(api.team.getMyWorkspaceRole);
   const updateMemberRole = useMutation(api.team.updateMemberRole);
   const assignMemberToTeam = useMutation(api.teams.assignMemberToTeam);
   const deleteTeam = useMutation(api.teams.deleteTeam);
@@ -416,9 +417,21 @@ export default function TeamAccessWorkspace() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {workspaceRoles.map((definition) => (
-                <tr key={definition.role}>
+                <tr
+                  key={definition.role}
+                  className={
+                    definition.role === myRole ? "bg-blue-50/60" : undefined
+                  }
+                >
                   <td className="px-6 py-4">
-                    <WorkspaceRolePill role={definition.role} />
+                    <div className="flex items-center gap-2">
+                      <WorkspaceRolePill role={definition.role} />
+                      {definition.role === myRole && (
+                        <span className="rounded-full bg-[#173b9a] px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.08em] text-white">
+                          {t("team.you")}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   {workspacePermissions.map((permission) => (
                     <td key={permission} className="px-3 py-4 text-center">

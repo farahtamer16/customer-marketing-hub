@@ -427,7 +427,19 @@ export const getPost = query({
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
       .unique();
     if (!self || post.workspaceId !== self.workspaceId) return null;
-    return post;
+    // Only looked up when it's not the caller's own post — lets the post
+    // detail page show "Viewing [Name]'s post" instead of leaving it
+    // ambiguous whose content a teammate is looking at.
+    const authorName =
+      post.userId === identity.subject
+        ? null
+        : ((
+            await ctx.db
+              .query("teamMembers")
+              .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", post.userId))
+              .unique()
+          )?.name ?? null);
+    return { ...post, authorName };
   },
 });
 

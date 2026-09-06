@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ExternalLink,
+  Eye,
   FileText,
   MessageCircleMore,
 } from "lucide-react";
@@ -29,11 +30,13 @@ export default function PostDetail({
   comments,
   userId,
   isOwnPost,
+  authorName,
 }: {
   post: Doc<"posts">;
   comments: Doc<"comments">[];
   userId: string;
   isOwnPost: boolean;
+  authorName?: string | null;
 }) {
   const t = useTranslations("posts");
   const commentT = useTranslations("comments");
@@ -51,6 +54,13 @@ export default function PostDetail({
         <ArrowLeft className="rtl:rotate-180" size={16} />
         {t("backToPosts")}
       </Link>
+
+      {!isOwnPost && (
+        <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          <Eye size={16} className="flex-none" />
+          {authorName ? t("viewingSomeonesPost", { name: authorName }) : t("viewingTeammatePost")}
+        </div>
+      )}
 
       <section className="glass-card overflow-hidden rounded-3xl">
         <div className="h-1.5 bg-gradient-to-r from-[#173b9a] via-[#526ff2] to-[#a9ffe0]" />

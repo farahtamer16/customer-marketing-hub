@@ -45,6 +45,7 @@ export default function PostDetailPage() {
       comments={comments}
       userId={user.id}
       isOwnPost={post.userId === user.id}
+      authorName={post.authorName}
     />
   );
 }

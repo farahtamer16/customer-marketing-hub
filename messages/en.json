@@ -256,7 +256,9 @@
     "notFound": "This post could not be found.",
     "backToPosts": "Back to posts",
     "postId": "Post {id}",
-    "savedDate": "Saved date"
+    "savedDate": "Saved date",
+    "viewingSomeonesPost": "Viewing {name}'s post",
+    "viewingTeammatePost": "Viewing a teammate's post"
   },
   "comments": {
     "eyebrow": "Engagement",
@@ -724,6 +726,7 @@
       "permissionMatrixHint": "A frontend policy proposal showing the access each role should receive.",
       "allowed": "Allowed",
       "notAllowed": "Not allowed",
+      "you": "You",
       "inviteTitle": "Add a teammate",
       "inviteDescription": "Create a real account for them and assign a starting workspace role.",
       "name": "Full name",

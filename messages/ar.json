@@ -256,7 +256,9 @@
     "notFound": "تعذر العثور على هذا المنشور.",
     "backToPosts": "العودة إلى المنشورات",
     "postId": "منشور {id}",
-    "savedDate": "التاريخ المحفوظ"
+    "savedDate": "التاريخ المحفوظ",
+    "viewingSomeonesPost": "عرض منشور {name}",
+    "viewingTeammatePost": "عرض منشور أحد زملاء الفريق"
   },
   "comments": {
     "eyebrow": "التفاعل",
@@ -724,6 +726,7 @@
       "permissionMatrixHint": "مقترح واجهة يوضّح الصلاحيات المناسبة لكل دور.",
       "allowed": "مسموح",
       "notAllowed": "غير مسموح",
+      "you": "أنت",
       "inviteTitle": "إضافة عضو للفريق",
       "inviteDescription": "أنشئ له حسابًا حقيقيًا واختر دورًا مبدئيًا داخل مساحة العمل.",
       "name": "الاسم الكامل",
