@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
   v.literal("ownerAdmin"),
@@ -19,8 +19,13 @@ const dashboardRoleByWorkspaceRole = {
 
 export const listMembers = query({
   handler: async (ctx) => {
-    await requirePermission(ctx, "manageTeam");
-    const members = await ctx.db.query("teamMembers").collect();
+    const actor = await requirePermission(ctx, "manageTeam");
+    const members = actor.workspaceId
+      ? await ctx.db
+          .query("teamMembers")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("teamMembers").collect();
     return members.map((member) => ({
       id: member._id,
       name: member.name,
@@ -61,37 +66,38 @@ export const needsOnboardingChoice = query({
   },
 });
 
-// Called once per session so a signed-in Clerk user gets a team seat. An
-// existing member just gets a lastActive touch; someone already invited or
-// admin-created (createTeamMember) links up by email with the role they
-// were already given. A genuinely new, uninvited sign-in needs `intent` —
-// "workspace" makes them the owner of this workspace, "individual" makes
-// them a plain social-media-user contributor — collected by the onboarding
-// choice screen (needsOnboardingChoice gates it) instead of guessed.
+// Called once per session so a signed-in Clerk user gets a team seat.
+// Only ever handles the two cases where a role/workspace already exists:
+// an existing member just gets a lastActive touch; someone already
+// invited or admin-created (teams.createTeamMember) links up by email
+// with the role and workspace they were already given. A genuinely new,
+// uninvited sign-in has no workspace to join at all under multi-tenancy —
+// that path goes through workspaces.createWorkspace instead (gated by
+// needsOnboardingChoice), never through here.
 export const ensureCurrentMember = mutation({
-  args: {
-    intent: v.optional(v.union(v.literal("workspace"), v.literal("individual"))),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const email = identity.email ?? "";
-
-    // Best-effort: if this person's email domain matches a growth account
-    // (they're at a company we're tracking), a real sign-in is real
-    // adoption evidence. Cooldown-guarded inside logProductSignal so it
-    // doesn't fire on every page load.
-    if (email) {
-      await ctx.runMutation(internal.growth.logProductSignal, {
-        email,
-        kind: "productLogin",
-      });
-    }
 
     const byClerkId = await ctx.db
       .query("teamMembers")
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
       .unique();
+
+    // Best-effort: if this person's email domain matches a growth account
+    // in their own workspace (they're at a company we're tracking), a real
+    // sign-in is real adoption evidence. Cooldown-guarded inside
+    // logProductSignal so it doesn't fire on every page load.
+    if (email) {
+      await ctx.runMutation(internal.growth.logProductSignal, {
+        email,
+        kind: "productLogin",
+        workspaceId: byClerkId?.workspaceId,
+      });
+    }
+
     if (byClerkId) {
       await ctx.db.patch(byClerkId._id, { lastActive: Date.now() });
       return byClerkId._id;
@@ -112,41 +118,7 @@ export const ensureCurrentMember = mutation({
       }
     }
 
-    if (!args.intent) {
-      throw new Error("Choose workspace or individual before joining");
-    }
-
-    const anyMember = await ctx.db.query("teamMembers").first();
-    const role = args.intent === "workspace" ? "ownerAdmin" : "socialMediaUser";
-    const name = identity.name ?? email ?? "New member";
-
-    const id = await ctx.db.insert("teamMembers", {
-      clerkUserId: identity.subject,
-      name,
-      email,
-      role,
-      status: "active",
-      lastActive: Date.now(),
-      createdAt: Date.now(),
-    });
-
-    // The one person this silently, automatically happens to is an existing
-    // admin: without this, a new individual sign-in lands as socialMediaUser
-    // with no one told it happened. A real notification instead of a dead
-    // end. Skipped when this is the very first member (nobody to notify) or
-    // when they explicitly chose to set up their own workspace admin seat.
-    if (anyMember && role !== "ownerAdmin") {
-      await ctx.db.insert("workspaceNotifications", {
-        kind: "system",
-        title: "New member joined",
-        detail: `${name}${email ? ` (${email})` : ""} signed in as an individual contributor — assign them to a team if that's not right.`,
-        occurredAt: Date.now(),
-        read: false,
-        href: "/growth/team",
-      });
-    }
-
-    return id;
+    throw new Error("No workspace to join — create one first");
   },
 });
 
@@ -157,10 +129,21 @@ export const getWorkspaceOwner = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const owner = await ctx.db
+    const self = await ctx.db
       .query("teamMembers")
-      .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
-      .first();
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    if (!self) return null;
+    const owner = self.workspaceId
+      ? await ctx.db
+          .query("teamMembers")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", self.workspaceId))
+          .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
+          .first()
+      : await ctx.db
+          .query("teamMembers")
+          .filter((q) => q.eq(q.field("role"), "ownerAdmin"))
+          .first();
     if (!owner) return null;
     return { name: owner.name, email: owner.email };
   },
@@ -172,9 +155,10 @@ export const getWorkspaceOwner = query({
 export const getMemberDetail = query({
   args: { memberId: v.id("teamMembers") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
     const member = await ctx.db.get(args.memberId);
     if (!member) return null;
+    requireInWorkspace(actor, member);
     return {
       id: member._id,
       clerkUserId: member.clerkUserId ?? null,
@@ -196,7 +180,7 @@ export const getMyRole = query({
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
       .unique();
     if (!member) return null;
-    return dashboardRoleByWorkspaceRole[member.role];
+    return member.dashboardHint ?? dashboardRoleByWorkspaceRole[member.role];
   },
 });
 
@@ -207,11 +191,13 @@ export const updateMemberRole = mutation({
 
     const member = await ctx.db.get(args.memberId);
     if (!member) throw new Error("Member not found");
+    requireInWorkspace(actor, member);
 
     await ctx.db.patch(args.memberId, { role: args.role });
 
     await ctx.db.insert("auditLog", {
       actor: actor.name,
+      workspaceId: actor.workspaceId,
       action: "roleChanged",
       target: `${member.name} → ${args.role}`,
       occurredAt: Date.now(),
@@ -222,7 +208,10 @@ export const updateMemberRole = mutation({
 export const removeMember = mutation({
   args: { memberId: v.id("teamMembers") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const member = await ctx.db.get(args.memberId);
+    if (!member) throw new Error("Member not found");
+    requireInWorkspace(actor, member);
     await ctx.db.delete(args.memberId);
   },
 });

@@ -27,7 +27,7 @@ export default function CommentList({
   const user = useQuery(api.users.current);
   const tasks = useQuery(
     api.followUpTasks.getTasksForUser,
-    user ? { userId: user._id } : "skip",
+    user ? {} : "skip",
   );
   const createTask = useMutation(api.followUpTasks.createFollowUpTask);
   const deleteComment = useMutation(api.comments.deleteComment);
@@ -43,7 +43,6 @@ export default function CommentList({
       try {
         await createTask({
           commentId: comment._id,
-          userId: user._id,
           title: `${t("convert")}: ${comment.authorName}`,
         });
         toast.success(t("taskCreated"));

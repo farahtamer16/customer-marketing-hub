@@ -7,9 +7,14 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 
 // Gates the whole private app behind a one-time choice for a brand-new,
-// uninvited sign-in: set up their own workspace (owner/admin) or join as an
-// individual contributor. An invited or admin-created member never sees
-// this — they already have a role — see team.needsOnboardingChoice.
+// uninvited sign-in. Under multi-tenancy there's no shared workspace left
+// to join without a real invite, so both options here create a brand-new,
+// isolated workspace (workspaces.createWorkspace) — "workspace" and
+// "individual" only differ in which dashboard/nav the creator lands on by
+// default (dashboardHint), never in their actual permissions: both are
+// ownerAdmin of their own new workspace, so neither can be locked out of
+// it. An invited or admin-created member never sees this — they already
+// have a role and workspace — see team.needsOnboardingChoice.
 export default function WorkspaceOnboardingGate({
   children,
 }: {
@@ -18,12 +23,14 @@ export default function WorkspaceOnboardingGate({
   const t = useTranslations("onboarding");
   const needsChoice = useQuery(api.team.needsOnboardingChoice);
   const ensureCurrentMember = useMutation(api.team.ensureCurrentMember);
+  const createWorkspace = useMutation(api.workspaces.createWorkspace);
+  const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState<"workspace" | "individual" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (needsChoice === false) {
-      ensureCurrentMember({}).catch((err) => {
+      ensureCurrentMember().catch((err) => {
         console.error("Failed to initialize team member:", err);
       });
     }
@@ -33,10 +40,14 @@ export default function WorkspaceOnboardingGate({
 
   if (needsChoice === true) {
     const choose = async (intent: "workspace" | "individual") => {
+      if (!name.trim()) {
+        setError(t("nameRequired"));
+        return;
+      }
       setSubmitting(intent);
       setError(null);
       try {
-        await ensureCurrentMember({ intent });
+        await createWorkspace({ name: name.trim(), intent });
       } catch (err) {
         setError(err instanceof Error ? err.message : t("failed"));
         setSubmitting(null);
@@ -50,7 +61,19 @@ export default function WorkspaceOnboardingGate({
             {t("title")}
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">{t("description")}</p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+
+          <label className="mt-6 block text-sm font-semibold text-slate-700">
+            {t("nameLabel")}
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("namePlaceholder")}
+              disabled={submitting !== null}
+              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </label>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => choose("workspace")}

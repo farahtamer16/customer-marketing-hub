@@ -2,7 +2,7 @@ import { query, mutation, internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requirePermission } from "./authz";
 import { computeAccountScores, computeMemberScore, computeScoreBreakdown } from "./scoring";
 
 // A lead's score is never client-supplied — it's this account's real
@@ -70,13 +70,24 @@ function toAccount(doc: Doc<"growthAccounts">) {
 export const listAccounts = query({
   args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
-    const accounts = args.teamId
-      ? await ctx.db
-          .query("growthAccounts")
-          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-          .collect()
-      : await ctx.db.query("growthAccounts").collect();
+    const actor = await requirePermission(ctx, "viewExecutiveAnalytics");
+    let accounts;
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+      accounts = await ctx.db
+        .query("growthAccounts")
+        .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+        .collect();
+    } else if (actor.workspaceId) {
+      accounts = await ctx.db
+        .query("growthAccounts")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+        .collect();
+    } else {
+      accounts = await ctx.db.query("growthAccounts").collect();
+    }
     return accounts.map(toAccount);
   },
 });
@@ -84,9 +95,11 @@ export const listAccounts = query({
 export const getAccount = query({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
+    const actor = await requirePermission(ctx, "viewExecutiveAnalytics");
     const account = await ctx.db.get(args.accountId);
-    return account ? toAccount(account) : null;
+    if (!account) return null;
+    requireInWorkspace(actor, account);
+    return toAccount(account);
   },
 });
 
@@ -96,9 +109,10 @@ export const getAccount = query({
 export const getScoreBreakdown = query({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
+    const actor = await requirePermission(ctx, "viewExecutiveAnalytics");
     const account = await ctx.db.get(args.accountId);
     if (!account) return null;
+    requireInWorkspace(actor, account);
     return computeScoreBreakdown({ members: account.members, signals: account.signals });
   },
 });
@@ -107,8 +121,13 @@ export const getScoreBreakdown = query({
 // derived the same way the old static demo data computed them.
 export const listLeads = query({
   handler: async (ctx) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
-    const accounts = await ctx.db.query("growthAccounts").collect();
+    const actor = await requirePermission(ctx, "viewExecutiveAnalytics");
+    const accounts = actor.workspaceId
+      ? await ctx.db
+          .query("growthAccounts")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("growthAccounts").collect();
     return accounts.flatMap((account) =>
       account.members
         .filter((member) => member.status !== "missing")
@@ -191,9 +210,14 @@ export const estimateOutcomes = query({
     ),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
 
-    const accounts = await ctx.db.query("growthAccounts").collect();
+    const accounts = actor.workspaceId
+      ? await ctx.db
+          .query("growthAccounts")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("growthAccounts").collect();
     const closedWon = accounts.filter(
       (account) => account.stage === "customer" || account.stage === "renewal",
     );
@@ -243,7 +267,12 @@ export const createAccount = mutation({
     teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
 
     const scores = computeAccountScores({
       stage: args.stage,
@@ -254,6 +283,7 @@ export const createAccount = mutation({
 
     return await ctx.db.insert("growthAccounts", {
       ...args,
+      workspaceId: actor.workspaceId,
       ...scores,
       members: [],
       signals: [],
@@ -285,11 +315,17 @@ export const updateAccount = mutation({
     teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
 
     const { accountId, ...patch } = args;
     const account = await ctx.db.get(accountId);
     if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
+    if (patch.teamId) {
+      const team = await ctx.db.get(patch.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
 
     const stage = patch.stage ?? account.stage;
     const scores = computeAccountScores({
@@ -317,10 +353,11 @@ export const updateAccount = mutation({
 export const addSignal = mutation({
   args: { accountId: v.id("growthAccounts"), signal: growthSignal },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
 
     const account = await ctx.db.get(args.accountId);
     if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
 
     const signals = [args.signal, ...account.signals];
     const scores = computeAccountScores({
@@ -342,10 +379,11 @@ export const addSignal = mutation({
 export const addMember = mutation({
   args: { accountId: v.id("growthAccounts"), member: buyingMemberInput },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
 
     const account = await ctx.db.get(args.accountId);
     if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
 
     const membersBeforeScoring = [...account.members, { ...args.member, score: 0 }];
     const scores = computeAccountScores({
@@ -366,7 +404,10 @@ export const addMember = mutation({
 export const deleteAccount = mutation({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
     await ctx.db.delete(args.accountId);
   },
 });
@@ -383,12 +424,18 @@ export const logProductSignal = internalMutation({
     email: v.string(),
     kind: v.union(v.literal("postCreated"), v.literal("productLogin")),
     postId: v.optional(v.id("posts")),
+    workspaceId: v.optional(v.id("workspaces")),
   },
   handler: async (ctx, args) => {
     const domain = args.email.split("@")[1]?.toLowerCase().trim();
     if (!domain) return;
 
-    const accounts = await ctx.db.query("growthAccounts").collect();
+    const accounts = args.workspaceId
+      ? await ctx.db
+          .query("growthAccounts")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", args.workspaceId))
+          .collect()
+      : await ctx.db.query("growthAccounts").collect();
     const matches = accounts.filter(
       (account) => account.domain.toLowerCase().trim() === domain,
     );
@@ -435,13 +482,19 @@ export const logSocialSignalForCommenter = internalMutation({
     classification: v.string(),
     content: v.string(),
     postId: v.optional(v.id("posts")),
+    workspaceId: v.optional(v.id("workspaces")),
   },
   handler: async (ctx, args) => {
     if (args.classification !== "Lead" && args.classification !== "Question") return null;
     const name = args.authorName.trim().toLowerCase();
     if (!name) return null;
 
-    const accounts = await ctx.db.query("growthAccounts").collect();
+    const accounts = args.workspaceId
+      ? await ctx.db
+          .query("growthAccounts")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", args.workspaceId))
+          .collect()
+      : await ctx.db.query("growthAccounts").collect();
     const matches = accounts.filter((account) =>
       account.members.some(
         (member) =>

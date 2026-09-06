@@ -29,6 +29,7 @@ import type * as team from "../team.js";
 import type * as teamTasks from "../teamTasks.js";
 import type * as teams from "../teams.js";
 import type * as users from "../users.js";
+import type * as workspaces from "../workspaces.js";
 
 import type {
   ApiFromModules,
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   teamTasks: typeof teamTasks;
   teams: typeof teams;
   users: typeof users;
+  workspaces: typeof workspaces;
 }>;
 
 /**

@@ -26,7 +26,7 @@ export default function TaskList() {
   const user = useQuery(api.users.current);
   const tasks = useQuery(
     api.followUpTasks.getTasksForUser,
-    user ? { userId: user._id } : "skip",
+    user ? {} : "skip",
   );
   const updateTaskStatus = useMutation(api.followUpTasks.updateTaskStatus);
 

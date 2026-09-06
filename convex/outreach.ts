@@ -1,7 +1,7 @@
 import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requirePermission } from "./authz";
 
 // Reuses the canonical permission table in authz.ts rather than duplicating
 // it — an internalQuery so an action (which has no ctx.db of its own) can
@@ -9,7 +9,7 @@ import { requirePermission } from "./authz";
 // through since this is a direct call, not a scheduled one.
 export const checkSendPermission = internalQuery({
   handler: async (ctx) => {
-    await requirePermission(ctx, "manageLeads");
+    return await requirePermission(ctx, "manageLeads");
   },
 });
 
@@ -31,7 +31,12 @@ export const logSent = internalMutation({
     resendId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("outreachEmails", { ...args, sentAt: Date.now() });
+    const account = await ctx.db.get(args.accountId);
+    await ctx.db.insert("outreachEmails", {
+      ...args,
+      workspaceId: account?.workspaceId,
+      sentAt: Date.now(),
+    });
   },
 });
 
@@ -50,12 +55,13 @@ export const sendOutreachEmail = action({
   handler: async (ctx, args): Promise<{ success: true }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    await ctx.runQuery(internal.outreach.checkSendPermission, {});
+    const actor = await ctx.runQuery(internal.outreach.checkSendPermission, {});
 
     const account = await ctx.runQuery(internal.outreach.getAccountForSend, {
       accountId: args.accountId,
     });
     if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
     const member = account.members.find((m) => m.id === args.memberId);
     if (!member || !member.email) {
       throw new Error("This person doesn't have an email on file");
@@ -106,7 +112,10 @@ export const sendOutreachEmail = action({
 export const listForAccount = query({
   args: { accountId: v.id("growthAccounts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageLeads");
+    const actor = await requirePermission(ctx, "manageLeads");
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
+    requireInWorkspace(actor, account);
     return await ctx.db
       .query("outreachEmails")
       .withIndex("by_accountId", (q) => q.eq("accountId", args.accountId))

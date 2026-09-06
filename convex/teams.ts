@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireMember, requirePermission } from "./authz";
+import { requireInWorkspace, requireMember, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
   v.literal("ownerAdmin"),
@@ -26,16 +26,21 @@ export const createTeam = mutation({
     if (!name) throw new Error("Team name is required");
     const id = await ctx.db.insert("teams", {
       name,
+      workspaceId: actor.workspaceId,
       createdBy: actor.clerkUserId ?? actor.email,
       createdAt: Date.now(),
     });
     for (const memberId of args.memberIds ?? []) {
+      const member = await ctx.db.get(memberId);
+      if (!member) continue;
+      requireInWorkspace(actor, member);
       await ctx.db.patch(memberId, { teamId: id });
     }
     await ctx.db.insert("auditLog", {
       actor: actor.name,
       action: "teamCreated",
       target: name,
+      workspaceId: actor.workspaceId,
       occurredAt: Date.now(),
     });
     return id;
@@ -48,17 +53,32 @@ export const createTeam = mutation({
 // itself a manageTeam action.
 export const listTeamNames = query({
   handler: async (ctx) => {
-    await requireMember(ctx);
-    const teams = await ctx.db.query("teams").collect();
+    const actor = await requireMember(ctx);
+    const teams = actor.workspaceId
+      ? await ctx.db
+          .query("teams")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("teams").collect();
     return teams.map((team) => ({ id: team._id, name: team.name }));
   },
 });
 
 export const listTeams = query({
   handler: async (ctx) => {
-    await requirePermission(ctx, "manageTeam");
-    const teams = await ctx.db.query("teams").collect();
-    const members = await ctx.db.query("teamMembers").collect();
+    const actor = await requirePermission(ctx, "manageTeam");
+    const teams = actor.workspaceId
+      ? await ctx.db
+          .query("teams")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("teams").collect();
+    const members = actor.workspaceId
+      ? await ctx.db
+          .query("teamMembers")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("teamMembers").collect();
     return teams.map((team) => ({
       id: team._id,
       name: team.name,
@@ -74,13 +94,33 @@ export const listTeams = query({
 // this app, not a stored/stale summary an admin has to trust blindly.
 export const getTeamPerformance = query({
   handler: async (ctx) => {
-    await requirePermission(ctx, "manageTeam");
-    const [teamsList, members, accounts, campaigns] = await Promise.all([
-      ctx.db.query("teams").collect(),
-      ctx.db.query("teamMembers").collect(),
-      ctx.db.query("growthAccounts").collect(),
-      ctx.db.query("campaigns").collect(),
-    ]);
+    const actor = await requirePermission(ctx, "manageTeam");
+    const wsId = actor.workspaceId;
+    const [teamsList, members, accounts, campaigns] = wsId
+      ? await Promise.all([
+          ctx.db
+            .query("teams")
+            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+            .collect(),
+          ctx.db
+            .query("teamMembers")
+            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+            .collect(),
+          ctx.db
+            .query("growthAccounts")
+            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+            .collect(),
+          ctx.db
+            .query("campaigns")
+            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", wsId))
+            .collect(),
+        ])
+      : await Promise.all([
+          ctx.db.query("teams").collect(),
+          ctx.db.query("teamMembers").collect(),
+          ctx.db.query("growthAccounts").collect(),
+          ctx.db.query("campaigns").collect(),
+        ]);
 
     const rollupFor = (teamId: (typeof teamsList)[number]["_id"] | undefined) => {
       const teamAccounts = accounts.filter((a) => a.teamId === teamId);
@@ -112,7 +152,10 @@ export const getTeamPerformance = query({
 export const deleteTeam = mutation({
   args: { teamId: v.id("teams") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("Team not found");
+    requireInWorkspace(actor, team);
     // Unassign rather than delete the people in it — removing a team is a
     // grouping change, not a reason to drop real member records.
     const members = await ctx.db
@@ -131,7 +174,15 @@ export const deleteTeam = mutation({
 export const assignMemberToTeam = mutation({
   args: { memberId: v.id("teamMembers"), teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const member = await ctx.db.get(args.memberId);
+    if (!member) throw new Error("Member not found");
+    requireInWorkspace(actor, member);
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
     await ctx.db.patch(args.memberId, { teamId: args.teamId });
   },
 });
@@ -157,8 +208,15 @@ export const createTeamMember = mutation({
       .unique();
     if (existingByEmail) throw new Error("A member with this email already exists");
 
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
+
     const id = await ctx.db.insert("teamMembers", {
       clerkUserId: args.clerkUserId,
+      workspaceId: actor.workspaceId,
       name: args.name,
       email: args.email,
       role: args.role,
@@ -172,6 +230,7 @@ export const createTeamMember = mutation({
       actor: actor.name,
       action: "memberCreated",
       target: args.name,
+      workspaceId: actor.workspaceId,
       occurredAt: Date.now(),
     });
 
@@ -194,13 +253,24 @@ export const assertCanManageTeam = mutation({
 export const listMembersByTeam = query({
   args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
-    const members = args.teamId
-      ? await ctx.db
-          .query("teamMembers")
-          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-          .collect()
-      : await ctx.db.query("teamMembers").collect();
+    const actor = await requirePermission(ctx, "manageTeam");
+    let members;
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+      members = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+        .collect();
+    } else if (actor.workspaceId) {
+      members = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+        .collect();
+    } else {
+      members = await ctx.db.query("teamMembers").collect();
+    }
     return members.map((member) => ({
       id: member._id,
       name: member.name,

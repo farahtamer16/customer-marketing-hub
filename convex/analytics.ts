@@ -3,12 +3,34 @@ import { query, internalMutation } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requirePermission } from "./authz";
+
+// A post's analytics are readable by anyone in the same workspace as the
+// post (not just its author) — the whole point of Content Studio is
+// cross-teammate visibility — but never by an outsider. Returns null for a
+// post that doesn't exist or belongs to a different workspace, same "don't
+// leak existence" shape as requireInWorkspace.
+async function assertPostReadableByCaller(ctx: QueryCtx, postId: Id<"posts">) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  const post = await ctx.db.get(postId);
+  if (!post) return null;
+  const self = await ctx.db
+    .query("teamMembers")
+    .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+    .unique();
+  if (self?.workspaceId && post.workspaceId && post.workspaceId !== self.workspaceId) {
+    return null;
+  }
+  return post;
+}
 
 // ── Get the most recent analytics entry for a post ─────────────────
 export const getLatestForPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    const post = await assertPostReadableByCaller(ctx, args.postId);
+    if (!post) return null;
     return await ctx.db
       .query("analytics")
       .withIndex("by_postId", (q) => q.eq("postId", args.postId))
@@ -32,9 +54,11 @@ export const recordAnalytics = internalMutation({
     impressions: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.postId);
     const id = await ctx.db.insert("analytics", {
       postId: args.postId,
       userId: args.userId,
+      workspaceId: post?.workspaceId,
       platform: args.platform,
       likes: args.likes,
       comments: args.comments,
@@ -146,14 +170,23 @@ async function overviewForTeamId(
   teamId: Id<"teams"> | undefined,
   platform: string | undefined,
   days: number | undefined,
+  workspaceId: Id<"workspaces"> | undefined,
 ) {
   const since = days ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
-  const members = teamId
-    ? await ctx.db
-        .query("teamMembers")
-        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
-        .collect()
-    : await ctx.db.query("teamMembers").collect();
+  let members;
+  if (teamId) {
+    members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+      .collect();
+  } else if (workspaceId) {
+    members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+  } else {
+    members = await ctx.db.query("teamMembers").collect();
+  }
   const linked = members.filter(
     (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
   );
@@ -193,7 +226,12 @@ export const getOverviewAdmin = query({
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const target = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
+      .unique();
+    if (target) requireInWorkspace(actor, target);
     return await overviewForUserId(ctx, args.userId, args.platform, args.days);
   },
 });
@@ -207,8 +245,13 @@ export const getOverviewForTeamAdmin = query({
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
-    return await overviewForTeamId(ctx, args.teamId, args.platform, args.days);
+    const actor = await requirePermission(ctx, "manageTeam");
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
+    return await overviewForTeamId(ctx, args.teamId, args.platform, args.days, actor.workspaceId);
   },
 });
 
@@ -301,13 +344,22 @@ async function postsWithAnalyticsForTeamId(
   teamId: Id<"teams"> | undefined,
   platform: string | undefined,
   status: string | undefined,
+  workspaceId: Id<"workspaces"> | undefined,
 ) {
-  const members = teamId
-    ? await ctx.db
-        .query("teamMembers")
-        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
-        .collect()
-    : await ctx.db.query("teamMembers").collect();
+  let members;
+  if (teamId) {
+    members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+      .collect();
+  } else if (workspaceId) {
+    members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+  } else {
+    members = await ctx.db.query("teamMembers").collect();
+  }
   const linked = members.filter(
     (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
   );
@@ -349,7 +401,12 @@ export const getPostsWithAnalyticsAdmin = query({
     status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const target = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
+      .unique();
+    if (target) requireInWorkspace(actor, target);
     return await postsWithAnalyticsForUserId(ctx, args.userId, args.platform, args.status);
   },
 });
@@ -362,8 +419,19 @@ export const getPostsWithAnalyticsForTeamAdmin = query({
     status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
-    return await postsWithAnalyticsForTeamId(ctx, args.teamId, args.platform, args.status);
+    const actor = await requirePermission(ctx, "manageTeam");
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
+    return await postsWithAnalyticsForTeamId(
+      ctx,
+      args.teamId,
+      args.platform,
+      args.status,
+      actor.workspaceId,
+    );
   },
 });
 
@@ -373,6 +441,8 @@ export const getPostsWithAnalyticsForTeamAdmin = query({
 export const getHistoryForPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    const post = await assertPostReadableByCaller(ctx, args.postId);
+    if (!post) return [];
     return await ctx.db
       .query("analytics")
       .withIndex("by_postId", (q) => q.eq("postId", args.postId))
@@ -386,6 +456,13 @@ export const getHistoryForPost = query({
 export const getCommentBreakdownForPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    const post = await assertPostReadableByCaller(ctx, args.postId);
+    if (!post) {
+      return Object.fromEntries(COMMENT_CATEGORIES.map((category) => [category, 0])) as Record<
+        (typeof COMMENT_CATEGORIES)[number],
+        number
+      >;
+    }
     return await commentBreakdownForPost(ctx, args.postId);
   },
 });

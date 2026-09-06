@@ -11,7 +11,6 @@ export default function UserInitializer() {
   const { isSignedIn, isLoaded } = useAuth();
 
   const getOrCreateUser = useMutation(api.users.getOrCreate);
-  const seedDemoWorkspace = useMutation(api.seed.seedDemoWorkspace);
   const linkSignup = useMutation(api.consumerJourney.linkSignup);
 
   useEffect(() => {
@@ -22,13 +21,11 @@ export default function UserInitializer() {
     getOrCreateUser().catch((error) => {
       console.error("Failed to initialize user:", error);
     });
-    // Workspace membership (ensureCurrentMember) is handled by
-    // WorkspaceOnboardingGate instead of here — a brand-new sign-in needs
-    // to choose workspace vs. individual before a role is assigned, which
-    // this fire-and-forget effect has no way to collect.
-    seedDemoWorkspace().catch((error) => {
-      console.error("Failed to seed demo workspace:", error);
-    });
+    // Workspace membership (ensureCurrentMember) and demo seeding are
+    // handled by WorkspaceOnboardingGate / workspaces.createWorkspace
+    // instead of here — a brand-new sign-in needs to create (or join) a
+    // real, isolated workspace before there's anything to seed, which
+    // this fire-and-forget effect has no way to do.
     // Links this session back to whatever anonymous landing-page visitor
     // it came from — only if this browser actually has one. Skipped
     // entirely (not just a no-op) for someone who never touched the
@@ -38,7 +35,7 @@ export default function UserInitializer() {
     if (visitorId) {
       linkSignup({ visitorId }).catch(() => {});
     }
-  }, [isLoaded, isSignedIn, getOrCreateUser, seedDemoWorkspace, linkSignup]);
+  }, [isLoaded, isSignedIn, getOrCreateUser, linkSignup]);
 
   return null;
 }

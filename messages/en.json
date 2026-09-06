@@ -5,11 +5,14 @@
   },
   "onboarding": {
     "title": "How will you be using Spiders AI?",
-    "description": "This decides what you can access — you can always be moved into a team later.",
+    "description": "This creates your own workspace, separate from everyone else's — you can always invite people into it later.",
+    "nameLabel": "Workspace name",
+    "namePlaceholder": "e.g. Acme Marketing",
+    "nameRequired": "Give your workspace a name first",
     "workspaceTitle": "Set up a workspace",
-    "workspaceDescription": "You're setting this up for your organization. You'll get the admin dashboard: manage teams, invite people, and see everyone's activity.",
-    "individualTitle": "Join as an individual",
-    "individualDescription": "You're joining to publish and manage your own content. You'll get the social media dashboard, scoped to your own posts and comments.",
+    "workspaceDescription": "You'll get the admin dashboard for your new workspace: manage teams, invite people, and see everyone's activity.",
+    "individualTitle": "Just for me",
+    "individualDescription": "You still get your own workspace, but land on the lighter social-media dashboard, scoped to your own posts and comments. You can still invite people later.",
     "settingUp": "Setting up…",
     "failed": "Couldn't complete setup — try again."
   },

@@ -253,7 +253,12 @@ export const publishInstagramPostAs = internalAction({
 
 // Called by the cron in convex/crons.ts to publish a post whose scheduledAt
 // has arrived.
-export const publishScheduledPost = action({
+// Internal only — this used to be a public action reachable directly by
+// any client with just a postId and no identity check at all, relying
+// only on the narrow "post must already be mid-Processing" window as
+// protection. Only the cron pipeline (processDuePosts) ever needs to call
+// this, so it's not exposed publicly at all now.
+export const publishScheduledPost = internalAction({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const post = await ctx.runQuery(api.posts.getPost, { postId: args.postId });
@@ -331,7 +336,7 @@ export const processDuePosts = internalAction({
     const duePosts = await ctx.runQuery(internal.posts.getScheduledItems, {});
     for (const post of duePosts) {
       await ctx.runMutation(internal.posts.markItemProcessing, { postId: post._id });
-      await ctx.runAction(api.meta.publishScheduledPost, { postId: post._id });
+      await ctx.runAction(internal.meta.publishScheduledPost, { postId: post._id });
     }
   },
 });

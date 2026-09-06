@@ -3,7 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requireMember, requirePermission } from "./authz";
 
 // Internal-only: only ever called from convex/meta.ts after it has already
 // derived the real publisher's identity server-side (never reachable from
@@ -23,8 +23,14 @@ export const recordPublishedPost = internalMutation({
     socialAccountId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const publisher = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
+      .unique();
+
     const id = await ctx.db.insert("posts", {
       userId: args.userId,
+      workspaceId: publisher?.workspaceId,
       platform: args.platform,
       content: args.content,
       mediaUrl: args.mediaUrl,
@@ -39,15 +45,12 @@ export const recordPublishedPost = internalMutation({
     // track as a growth account (matched by email domain), log it as a
     // real product-usage signal instead of adoption only moving when
     // someone remembers to log it by hand.
-    const publisher = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
-      .unique();
     if (publisher?.email) {
       await ctx.runMutation(internal.growth.logProductSignal, {
         email: publisher.email,
         kind: "postCreated",
         postId: id,
+        workspaceId: publisher.workspaceId,
       });
     }
 
@@ -89,8 +92,13 @@ export const schedulePost = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
     const id = await ctx.db.insert("posts", {
       userId: identity.subject,
+      workspaceId: self?.workspaceId,
       platform: args.platform,
       content: args.content,
       mediaUrl: args.mediaUrl,
@@ -125,7 +133,12 @@ export const getPostsForUser = query({
 export const getPostsForUserAdmin = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const target = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
+      .unique();
+    if (target) requireInWorkspace(actor, target);
     return await ctx.db
       .query("posts")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -144,13 +157,22 @@ export const getPostsForUserAdmin = query({
 export const getPostsForTeamAdmin = query({
   args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (team) requireInWorkspace(actor, team);
+    }
     const members = args.teamId
       ? await ctx.db
           .query("teamMembers")
           .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
           .collect()
-      : await ctx.db.query("teamMembers").collect();
+      : actor.workspaceId
+        ? await ctx.db
+            .query("teamMembers")
+            .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+            .collect()
+        : await ctx.db.query("teamMembers").collect();
     const linked = members.filter(
       (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
     );
@@ -185,11 +207,15 @@ export const getPostsForUserInternal = internalQuery({
 // published by different teammates, so this can't be the per-user query.
 export const listPublished = query({
   handler: async (ctx) => {
-    return await ctx.db
+    const actor = await requireMember(ctx);
+    const posts = await ctx.db
       .query("posts")
       .withIndex("by_status", (q) => q.eq("status", "Published"))
       .order("desc")
       .collect();
+    return actor.workspaceId
+      ? posts.filter((post) => !post.workspaceId || post.workspaceId === actor.workspaceId)
+      : posts;
   },
 });
 
@@ -244,6 +270,7 @@ export const markItemPublished = internalMutation({
           email: publisher.email,
           kind: "postCreated",
           postId: args.postId,
+          workspaceId: publisher.workspaceId,
         });
       }
     }
@@ -319,9 +346,10 @@ export const retryPost = mutation({
 export const cancelScheduledItemAdmin = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
     const item = await ctx.db.get(args.postId);
     if (!item) throw new Error("Post not found");
+    requireInWorkspace(actor, item);
     if (item.status !== "Scheduled") throw new Error("Only scheduled posts can be cancelled");
     await ctx.db.delete(args.postId);
   },
@@ -330,7 +358,10 @@ export const cancelScheduledItemAdmin = mutation({
 export const deletePostAdmin = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const item = await ctx.db.get(args.postId);
+    if (!item) throw new Error("Post not found");
+    requireInWorkspace(actor, item);
     await ctx.db.delete(args.postId);
   },
 });
@@ -338,9 +369,10 @@ export const deletePostAdmin = mutation({
 export const retryPostAdmin = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
     const item = await ctx.db.get(args.postId);
     if (!item) throw new Error("Post not found");
+    requireInWorkspace(actor, item);
     if (item.status !== "Failed") throw new Error("Only failed posts can be retried");
     await ctx.db.patch(args.postId, {
       status: "Scheduled",

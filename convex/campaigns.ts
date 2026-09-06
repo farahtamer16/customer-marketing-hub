@@ -2,7 +2,7 @@ import { query, mutation } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requirePermission } from "./authz";
 
 const channel = v.union(
   v.literal("website"),
@@ -58,13 +58,24 @@ async function computeSocialRollup(
 export const listCampaigns = query({
   args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "viewExecutiveAnalytics");
-    const campaigns = args.teamId
-      ? await ctx.db
-          .query("campaigns")
-          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-          .collect()
-      : await ctx.db.query("campaigns").collect();
+    const actor = await requirePermission(ctx, "viewExecutiveAnalytics");
+    let campaigns;
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+      campaigns = await ctx.db
+        .query("campaigns")
+        .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+        .collect();
+    } else if (actor.workspaceId) {
+      campaigns = await ctx.db
+        .query("campaigns")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+        .collect();
+    } else {
+      campaigns = await ctx.db.query("campaigns").collect();
+    }
     return await Promise.all(
       campaigns.map(async (campaign) => {
         const social = await computeSocialRollup(ctx, campaign.postIds);
@@ -126,9 +137,15 @@ export const createCampaign = mutation({
     teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageCampaigns");
+    const actor = await requirePermission(ctx, "manageCampaigns");
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
     return await ctx.db.insert("campaigns", {
       ...args,
+      workspaceId: actor.workspaceId,
       // Placeholders — listCampaigns computes the real values from
       // accountIds/postIds whenever any are linked.
       accounts: 0,
@@ -154,7 +171,15 @@ export const updateCampaign = mutation({
     teamId: v.optional(v.id("teams")),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageCampaigns");
+    const actor = await requirePermission(ctx, "manageCampaigns");
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    requireInWorkspace(actor, campaign);
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+    }
     const { campaignId, ...patch } = args;
     await ctx.db.patch(campaignId, { ...patch, updatedAt: Date.now() });
   },
@@ -163,7 +188,10 @@ export const updateCampaign = mutation({
 export const deleteCampaign = mutation({
   args: { campaignId: v.id("campaigns") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageCampaigns");
+    const actor = await requirePermission(ctx, "manageCampaigns");
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    requireInWorkspace(actor, campaign);
     await ctx.db.delete(args.campaignId);
   },
 });

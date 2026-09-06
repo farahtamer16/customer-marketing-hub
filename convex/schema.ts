@@ -3,6 +3,17 @@ import { v } from "convex/values";
 
 export default defineSchema({
 
+  // A tenant. Every real customer-data table below carries a workspaceId
+  // pointing here. `workspaceId` is added as optional first (Convex can't
+  // push a required field onto a table with existing rows), backfilled via
+  // users.ts-style one-off migrations, then tightened to required in a
+  // follow-up schema push once every row has one.
+  workspaces: defineTable({
+    name: v.string(),
+    createdBy: v.string(),
+    createdAt: v.number(),
+  }),
+
   users: defineTable({
     clerkUserId: v.string(),
     name: v.optional(v.string()),
@@ -13,6 +24,7 @@ export default defineSchema({
 
   socialAccounts: defineTable({
     userId: v.optional(v.string()),
+    workspaceId: v.optional(v.id("workspaces")),
     platform: v.union(
       v.literal("Instagram"),
       v.literal("Facebook"),
@@ -38,10 +50,12 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_platform", ["platform"])
-    .index("by_userId_platform", ["userId", "platform"]),
+    .index("by_userId_platform", ["userId", "platform"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   posts: defineTable({
     userId: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     platform: v.union(v.literal("Instagram"), v.literal("Facebook"), v.literal("LinkedIn"), v.literal("TikTok"), v.literal("X")),
     content: v.string(),
     mediaUrl: v.optional(v.string()),
@@ -64,11 +78,14 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_workspaceId_status", ["workspaceId", "status"]),
 
   analytics: defineTable({
     postId: v.id("posts"),
     userId: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     platform: v.string(),
     likes: v.number(),
     comments: v.number(),
@@ -85,10 +102,12 @@ export default defineSchema({
   })
     .index("by_postId", ["postId"])
     .index("by_userId", ["userId"])
-    .index("by_postId_scrapedAt", ["postId", "scrapedAt"]),
-    
+    .index("by_postId_scrapedAt", ["postId", "scrapedAt"])
+    .index("by_workspaceId", ["workspaceId"]),
+
   comments: defineTable({
     userId: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     targetUrl: v.string(),
     postId: v.optional(v.id("posts")),
     authorName: v.string(),
@@ -114,11 +133,13 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_status_scheduled", ["status", "scheduledAt"])
     .index("by_platform", ["platform"])
-    .index("by_postId", ["postId"]),
+    .index("by_postId", ["postId"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   followUpTasks: defineTable({
     commentId: v.id("comments"),
     userId: v.id("users"),
+    workspaceId: v.optional(v.id("workspaces")),
 
     title: v.string(),
 
@@ -133,10 +154,12 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_commentId", ["commentId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   teamMembers: defineTable({
     clerkUserId: v.optional(v.string()),
+    workspaceId: v.optional(v.id("workspaces")),
     name: v.string(),
     email: v.string(),
     role: v.union(
@@ -156,10 +179,20 @@ export default defineSchema({
     // created before multi-team support (or never assigned) just show up as
     // ungrouped rather than requiring a backfill migration.
     teamId: v.optional(v.id("teams")),
+    // Set only on the person who self-serve-created their own workspace at
+    // sign-up — decides which dashboard/nav they land on by default
+    // (team.getMyRole) without affecting their actual role/permissions,
+    // which are always ownerAdmin for a workspace's creator. Everyone else
+    // (invited members, admin-created members) leaves this unset and just
+    // gets the dashboard their real role maps to.
+    dashboardHint: v.optional(
+      v.union(v.literal("admin"), v.literal("social_media_user")),
+    ),
   })
     .index("by_clerkUserId", ["clerkUserId"])
     .index("by_email", ["email"])
-    .index("by_teamId", ["teamId"]),
+    .index("by_teamId", ["teamId"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   // A named group of teamMembers an admin can create, assign people to, and
   // monitor on its own or alongside every other team.
@@ -167,13 +200,15 @@ export default defineSchema({
     name: v.string(),
     createdBy: v.string(),
     createdAt: v.number(),
-  }),
+    workspaceId: v.optional(v.id("workspaces")),
+  }).index("by_workspaceId", ["workspaceId"]),
 
   // A real task assigned to a whole team (not one person's comment-derived
   // followUpTasks row) — an admin hands the team something concrete to do,
   // and any member of that team can move it along.
   teamTasks: defineTable({
     teamId: v.id("teams"),
+    workspaceId: v.optional(v.id("workspaces")),
     title: v.string(),
     description: v.optional(v.string()),
     status: v.union(
@@ -185,10 +220,13 @@ export default defineSchema({
     dueAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_teamId", ["teamId"]),
+  })
+    .index("by_teamId", ["teamId"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   growthAccounts: defineTable({
     name: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     domain: v.string(),
     industry: v.string(),
     employees: v.number(),
@@ -297,10 +335,13 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_stage", ["stage"])
-    .index("by_teamId", ["teamId"]),
+    .index("by_teamId", ["teamId"])
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_workspaceId_stage", ["workspaceId", "stage"]),
 
   campaigns: defineTable({
     name: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     channel: v.union(
       v.literal("website"),
       v.literal("campaign"),
@@ -332,7 +373,9 @@ export default defineSchema({
     teamId: v.optional(v.id("teams")),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_teamId", ["teamId"]),
+  })
+    .index("by_teamId", ["teamId"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   journeySteps: defineTable({
     stage: v.union(
@@ -351,10 +394,15 @@ export default defineSchema({
     ),
     completed: v.boolean(),
     updatedAt: v.number(),
-  }).index("by_stage", ["stage"]),
+    workspaceId: v.optional(v.id("workspaces")),
+  })
+    .index("by_stage", ["stage"])
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_workspaceId_stage", ["workspaceId", "stage"]),
 
   approvalPosts: defineTable({
     author: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     // The Clerk user id to publish as once every step approves — derived
     // server-side from the submitter's identity, not client-supplied.
     // Optional since posts created before this field existed have none;
@@ -414,7 +462,10 @@ export default defineSchema({
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_status", ["status"]),
+  })
+    .index("by_status", ["status"])
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_workspaceId_status", ["workspaceId", "status"]),
 
   workspaceNotifications: defineTable({
     kind: v.union(
@@ -428,10 +479,14 @@ export default defineSchema({
     occurredAt: v.number(),
     read: v.boolean(),
     href: v.string(),
-  }).index("by_occurredAt", ["occurredAt"]),
+    workspaceId: v.optional(v.id("workspaces")),
+  })
+    .index("by_occurredAt", ["occurredAt"])
+    .index("by_workspaceId_occurredAt", ["workspaceId", "occurredAt"]),
 
   auditLog: defineTable({
     actor: v.string(),
+    workspaceId: v.optional(v.id("workspaces")),
     action: v.union(
       v.literal("roleChanged"),
       v.literal("integrationConnected"),
@@ -443,7 +498,9 @@ export default defineSchema({
     ),
     target: v.string(),
     occurredAt: v.number(),
-  }).index("by_occurredAt", ["occurredAt"]),
+  })
+    .index("by_occurredAt", ["occurredAt"])
+    .index("by_workspaceId_occurredAt", ["workspaceId", "occurredAt"]),
 
   // Anonymous consumer-side funnel tracking for the public landing page
   // (spiders.ai) — a browser-generated id, not a login, so we can see
@@ -458,6 +515,7 @@ export default defineSchema({
   // with no trace of what actually went out.
   outreachEmails: defineTable({
     accountId: v.id("growthAccounts"),
+    workspaceId: v.optional(v.id("workspaces")),
     memberId: v.string(),
     toEmail: v.string(),
     subject: v.string(),
@@ -465,7 +523,9 @@ export default defineSchema({
     sentBy: v.string(),
     sentAt: v.number(),
     resendId: v.optional(v.string()),
-  }).index("by_accountId", ["accountId"]),
+  })
+    .index("by_accountId", ["accountId"])
+    .index("by_workspaceId", ["workspaceId"]),
 
   consumerVisitors: defineTable({
     visitorId: v.string(),

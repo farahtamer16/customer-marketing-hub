@@ -1,15 +1,20 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
 
-// One-time seed for the Growth/CRM workspace so the dashboards aren't empty
-// on a fresh Convex deployment. Safe to call repeatedly — it no-ops once
-// growthAccounts already has data. Team members are NOT seeded here: the
-// signed-in Clerk user is bootstrapped as the workspace owner automatically
-// (see convex/team.ts, ensureCurrentMember), so the roster reflects real
-// people instead of demo placeholders.
-export const seedDemoWorkspace = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const existing = await ctx.db.query("growthAccounts").first();
+// One-time seed for a workspace's Growth/CRM data so its dashboards aren't
+// empty right after creation. Called once from workspaces.createWorkspace,
+// scoped to that new workspace — safe to call repeatedly since it no-ops
+// once that specific workspace already has growthAccounts. Team members
+// are NOT seeded here: the workspace's creator is added as its owner by
+// createWorkspace itself, so the roster reflects the real person instead
+// of a demo placeholder.
+export const seedDemoWorkspace = internalMutation({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, { workspaceId }) => {
+    const existing = await ctx.db
+      .query("growthAccounts")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", workspaceId))
+      .first();
     if (existing) return { seeded: false };
 
     const now = Date.now();
@@ -157,6 +162,7 @@ export const seedDemoWorkspace = mutation({
     for (const account of accounts) {
       await ctx.db.insert("growthAccounts", {
         ...account,
+        workspaceId,
         createdAt: now,
         updatedAt: now,
       });
@@ -169,7 +175,7 @@ export const seedDemoWorkspace = mutation({
       { name: "Customer story retargeting", channel: "website" as const, spend: 14000, accounts: 39, opportunities: 10, pipeline: 290000, customers: 6, retained: 6, ltv: 470000 },
     ];
     for (const campaign of campaigns) {
-      await ctx.db.insert("campaigns", { ...campaign, createdAt: now, updatedAt: now });
+      await ctx.db.insert("campaigns", { ...campaign, workspaceId, createdAt: now, updatedAt: now });
     }
 
     const journeySteps = [
@@ -181,7 +187,7 @@ export const seedDemoWorkspace = mutation({
       { stage: "growthOperations" as const, owner: "cmo" as const, completed: false },
     ];
     for (const step of journeySteps) {
-      await ctx.db.insert("journeySteps", { ...step, updatedAt: now });
+      await ctx.db.insert("journeySteps", { ...step, workspaceId, updatedAt: now });
     }
 
     const approvalPosts = [
@@ -260,7 +266,7 @@ export const seedDemoWorkspace = mutation({
       },
     ];
     for (const post of approvalPosts) {
-      await ctx.db.insert("approvalPosts", { ...post, createdAt: now, updatedAt: now });
+      await ctx.db.insert("approvalPosts", { ...post, workspaceId, createdAt: now, updatedAt: now });
     }
 
     const notifications = [
@@ -270,7 +276,7 @@ export const seedDemoWorkspace = mutation({
       { kind: "system" as const, title: "Workspace setup reminder", detail: "Finish inviting your team and assigning permissions.", occurredAt: now - day, read: true, href: "/growth/admin/setup" },
     ];
     for (const notification of notifications) {
-      await ctx.db.insert("workspaceNotifications", notification);
+      await ctx.db.insert("workspaceNotifications", { ...notification, workspaceId });
     }
 
     const auditEntries = [
@@ -278,7 +284,7 @@ export const seedDemoWorkspace = mutation({
       { actor: "System", action: "approvalRuleChanged" as const, target: "High-risk campaign workflow", occurredAt: now - 6 * hour },
     ];
     for (const entry of auditEntries) {
-      await ctx.db.insert("auditLog", entry);
+      await ctx.db.insert("auditLog", { ...entry, workspaceId });
     }
 
     return { seeded: true };

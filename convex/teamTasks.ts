@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireMember, requirePermission } from "./authz";
+import { requireInWorkspace, requireMember, requirePermission } from "./authz";
 
 const status = v.union(
   v.literal("Todo"),
@@ -19,10 +19,14 @@ export const createTeamTask = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "manageTeam");
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("Team not found");
+    requireInWorkspace(actor, team);
     const title = args.title.trim();
     if (!title) throw new Error("Task title is required");
     return await ctx.db.insert("teamTasks", {
       teamId: args.teamId,
+      workspaceId: actor.workspaceId,
       title,
       description: args.description?.trim() || undefined,
       status: "Todo",
@@ -37,7 +41,10 @@ export const createTeamTask = mutation({
 export const listTasksForTeam = query({
   args: { teamId: v.id("teams") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("Team not found");
+    requireInWorkspace(actor, team);
     return await ctx.db
       .query("teamTasks")
       .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
@@ -75,6 +82,7 @@ export const updateTeamTaskStatus = mutation({
     const member = await requireMember(ctx);
     const task = await ctx.db.get(args.taskId);
     if (!task) throw new Error("Task not found");
+    requireInWorkspace(member, task);
     const canManage = member.role === "ownerAdmin";
     if (!canManage && member.teamId !== task.teamId) {
       throw new Error("This task belongs to a different team");
@@ -86,7 +94,10 @@ export const updateTeamTaskStatus = mutation({
 export const deleteTeamTask = mutation({
   args: { taskId: v.id("teamTasks") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+    requireInWorkspace(actor, task);
     await ctx.db.delete(args.taskId);
   },
 });

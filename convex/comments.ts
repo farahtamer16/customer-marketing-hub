@@ -3,7 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { requirePermission } from "./authz";
+import { requireInWorkspace, requirePermission } from "./authz";
 
 // Called after fetching real comments via meta.fetchPostComments (which
 // already derived and verified the caller's identity), so every comment in
@@ -26,9 +26,15 @@ export const storeComments = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
+
     for (const c of args.comments) {
       const commentId = await ctx.db.insert("comments", {
         userId: identity.subject,
+        workspaceId: self?.workspaceId,
         targetUrl: "",
         postId: c.postId,
         authorName: c.authorName,
@@ -46,6 +52,7 @@ export const storeComments = mutation({
         classification: c.classification,
         content: c.content,
         postId: c.postId,
+        workspaceId: self?.workspaceId,
       });
       // Denormalized onto the comment so the social side (Comments page)
       // can show "known CRM contact" without a second lookup.
@@ -90,8 +97,13 @@ export const createComment = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
     return await ctx.db.insert("comments", {
       userId: identity.subject,
+      workspaceId: self?.workspaceId,
       targetUrl: args.targetUrl,
       authorName: args.authorName,
       content: args.content,
@@ -122,8 +134,13 @@ export const scheduleComment = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
     return await ctx.db.insert("comments", {
       userId: identity.subject,
+      workspaceId: self?.workspaceId,
       targetUrl: args.targetUrl,
       authorName: args.authorName,
       content: args.content,
@@ -198,7 +215,12 @@ export const getCommentsForUser = query({
 export const getCommentsForUserAdmin = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const target = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", args.userId))
+      .unique();
+    if (target) requireInWorkspace(actor, target);
     return await ctx.db
       .query("comments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -213,13 +235,24 @@ export const getCommentsForUserAdmin = query({
 export const getCommentsForTeamAdmin = query({
   args: { teamId: v.optional(v.id("teams")) },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
-    const members = args.teamId
-      ? await ctx.db
-          .query("teamMembers")
-          .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-          .collect()
-      : await ctx.db.query("teamMembers").collect();
+    const actor = await requirePermission(ctx, "manageTeam");
+    let members;
+    if (args.teamId) {
+      const team = await ctx.db.get(args.teamId);
+      if (!team) throw new Error("Team not found");
+      requireInWorkspace(actor, team);
+      members = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+        .collect();
+    } else if (actor.workspaceId) {
+      members = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+        .collect();
+    } else {
+      members = await ctx.db.query("teamMembers").collect();
+    }
     const linked = members.filter(
       (m): m is typeof m & { clerkUserId: string } => !!m.clerkUserId,
     );
@@ -259,7 +292,10 @@ export const deleteComment = mutation({
 export const deleteCommentAdmin = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "manageTeam");
+    const actor = await requirePermission(ctx, "manageTeam");
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) throw new Error("Comment not found");
+    requireInWorkspace(actor, comment);
     await ctx.db.delete(args.commentId);
   },
 });

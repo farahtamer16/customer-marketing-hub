@@ -1,4 +1,5 @@
 import type { QueryCtx, MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 
 export type WorkspaceRole =
   | "ownerAdmin"
@@ -77,4 +78,24 @@ export async function requireMember(ctx: QueryCtx | MutationCtx) {
   if (!member) throw new Error("You are not a member of this workspace yet");
 
   return member;
+}
+
+// Confirms a document the caller passed an id for actually belongs to
+// their own workspace — role/permission checks alone (requirePermission,
+// requireMember) only ever ask "can this person do this kind of thing,"
+// never "does this specific document belong to them." Without this, an
+// ownerAdmin in one workspace could pass another workspace's document id
+// and silently read or mutate it. `doc.workspaceId` is `undefined` only
+// for rows created before the multi-tenancy migration backfilled every
+// row — treated as "not yet scoped, allow" during that transition rather
+// than a hard failure; once the backfill completes and the field is
+// required, this branch never triggers.
+export function requireInWorkspace(
+  member: Doc<"teamMembers">,
+  doc: { workspaceId?: Id<"workspaces"> },
+) {
+  if (doc.workspaceId && doc.workspaceId !== member.workspaceId) {
+    // Don't leak that the other workspace's document exists at all.
+    throw new Error("Not found");
+  }
 }

@@ -2,7 +2,7 @@ import { query, mutation, internalMutation, internalAction, internalQuery } from
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { requireMember, requirePermission } from "./authz";
+import { requireInWorkspace, requireMember, requirePermission } from "./authz";
 
 const workspaceRole = v.union(
   v.literal("ownerAdmin"),
@@ -15,8 +15,13 @@ export const listPosts = query({
   handler: async (ctx) => {
     // Any workspace member can be assigned an approval step regardless of
     // role, so this only checks membership, not a specific permission.
-    await requireMember(ctx);
-    const posts = await ctx.db.query("approvalPosts").collect();
+    const actor = await requireMember(ctx);
+    const posts = actor.workspaceId
+      ? await ctx.db
+          .query("approvalPosts")
+          .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+          .collect()
+      : await ctx.db.query("approvalPosts").collect();
     return posts.map((post) => ({ id: post._id, ...post }));
   },
 });
@@ -24,9 +29,11 @@ export const listPosts = query({
 export const getPost = query({
   args: { postId: v.id("approvalPosts") },
   handler: async (ctx, args) => {
-    await requireMember(ctx);
+    const actor = await requireMember(ctx);
     const post = await ctx.db.get(args.postId);
-    return post ? { id: post._id, ...post } : null;
+    if (!post) return null;
+    requireInWorkspace(actor, post);
+    return { id: post._id, ...post };
   },
 });
 
@@ -58,7 +65,7 @@ export const createPost = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "publishContent");
+    const member = await requirePermission(ctx, "publishContent");
 
     const now = Date.now();
     const identity = await ctx.auth.getUserIdentity();
@@ -69,6 +76,7 @@ export const createPost = mutation({
       // Derived from the caller's own authenticated identity, not trusted
       // from the client — this is who publishing will run as once approved.
       authorUserId: identity?.subject,
+      workspaceId: member.workspaceId,
       campaign: args.campaign,
       content: args.content,
       channels: args.channels,
@@ -90,6 +98,7 @@ export const createPost = mutation({
     });
 
     await ctx.db.insert("workspaceNotifications", {
+      workspaceId: member.workspaceId,
       kind: "approval",
       title: `${args.campaign} needs approval`,
       detail: `${actor} submitted a post awaiting ${args.steps[0]?.role ?? "review"}.`,
@@ -117,6 +126,7 @@ export const decide = mutation({
     if (!post) throw new Error("Approval post not found");
 
     const member = await requireMember(ctx);
+    requireInWorkspace(member, post);
     const currentStep = post.steps.find((step) => step.status === "current");
     if (!currentStep) throw new Error("This post has no step awaiting a decision");
     if (member.role !== "ownerAdmin" && member.role !== currentStep.role) {
@@ -183,6 +193,7 @@ export const decide = mutation({
         actor,
         action: "postApproved",
         target: post.campaign,
+        workspaceId: member.workspaceId,
         occurredAt: now,
       });
       await ctx.scheduler.runAfter(0, internal.approvals.publishApprovedPost, {
@@ -190,6 +201,7 @@ export const decide = mutation({
       });
     } else if (args.decision !== "approve") {
       await ctx.db.insert("workspaceNotifications", {
+        workspaceId: member.workspaceId,
         kind: "approval",
         title:
           args.decision === "reject"
@@ -280,6 +292,7 @@ export const markPublishResult = internalMutation({
     });
 
     await ctx.db.insert("workspaceNotifications", {
+      workspaceId: post.workspaceId,
       kind: args.published ? "approval" : "system",
       title: args.published
         ? `${post.campaign} is now live`
