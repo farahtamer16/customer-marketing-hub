@@ -65,7 +65,7 @@ export default function DataTable<TData extends RowData>({
 
   return (
     <div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[760px] border-collapse text-start">
           <thead className="border-b border-slate-100 text-[0.65rem] font-bold uppercase tracking-[0.13em] text-slate-400">
             {table.getHeaderGroups().map((group) => (
@@ -129,6 +129,49 @@ export default function DataTable<TData extends RowData>({
           </tbody>
         </table>
       </div>
+
+      <div className="divide-y divide-slate-100 md:hidden">
+        {table.getRowModel().rows.length ? (
+          table.getRowModel().rows.map((row) => (
+            <div
+              key={row.id}
+              role={onRowClick ? "button" : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              aria-label={getRowLabel?.(row.original)}
+              onClick={(event) => activateRow(row.original, event.target)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  activateRow(row.original, event.target);
+                }
+              }}
+              className={`space-y-2.5 px-5 py-4 ${onRowClick ? "cursor-pointer transition-colors hover:bg-blue-50/55 focus:bg-blue-50/55 focus:outline-none" : ""}`}
+            >
+              {row.getAllCells().map((cell) => {
+                const header = cell.column.columnDef.header;
+                const label = typeof header === "string" ? header : undefined;
+                return (
+                  <div key={cell.id} className="flex items-center justify-between gap-3">
+                    {label && (
+                      <span className="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-slate-400">
+                        {label}
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1 text-end text-sm text-slate-700 [&:only-child]:text-start">
+                      <table.FlexRender cell={cell} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        ) : (
+          <div className="px-6 py-12 text-center text-sm text-slate-400">
+            {emptyMessage}
+          </div>
+        )}
+      </div>
+
       {table.getPageCount() > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 text-xs text-slate-500">
           <p>

@@ -119,38 +119,110 @@ function PostsTab({ teamId }: { teamId: Id<"teams"> | null }) {
       ) : posts.data.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-slate-500">{t("postsEmpty")}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <div className="min-w-[960px]">
-            <div className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center border-b border-slate-100 px-6 py-4 text-[0.62rem] font-bold uppercase tracking-[0.13em] text-slate-400">
-              <span>{t("postColumn")}</span>
-              <span>{t("platform")}</span>
-              <span>{t("status")}</span>
-              <span>{t("likes")}</span>
-              <span>{t("comments")}</span>
-              <span>{t("shares")}</span>
-              <span>{t("reach")}</span>
-              <span>{t("impressions")}</span>
-              <span />
-            </div>
-            {posts.data.map(({ post, analytics }) => (
-              <div
-                key={post._id}
-                className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center px-6 py-4 text-sm text-slate-600 odd:bg-white/35"
-              >
-                <Link
-                  href={`/posts/${post._id}`}
-                  className="truncate pr-5 font-semibold text-[#173b9a] hover:underline"
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <div className="min-w-[960px]">
+              <div className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center border-b border-slate-100 px-6 py-4 text-[0.62rem] font-bold uppercase tracking-[0.13em] text-slate-400">
+                <span>{t("postColumn")}</span>
+                <span>{t("platform")}</span>
+                <span>{t("status")}</span>
+                <span>{t("likes")}</span>
+                <span>{t("comments")}</span>
+                <span>{t("shares")}</span>
+                <span>{t("reach")}</span>
+                <span>{t("impressions")}</span>
+                <span />
+              </div>
+              {posts.data.map(({ post, analytics }) => (
+                <div
+                  key={post._id}
+                  className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center px-6 py-4 text-sm text-slate-600 odd:bg-white/35"
                 >
-                  {post.content}
-                </Link>
-                <span className="text-xs text-slate-400">{post.platform}</span>
-                <span className="text-xs text-slate-400">{post.status}</span>
-                <span>{(analytics?.likes ?? 0).toLocaleString()}</span>
-                <span>{(analytics?.comments ?? 0).toLocaleString()}</span>
-                <span>{(analytics?.shares ?? 0).toLocaleString()}</span>
-                <span>{analytics?.reach !== undefined ? analytics.reach.toLocaleString() : "—"}</span>
-                <span>{analytics?.impressions !== undefined ? analytics.impressions.toLocaleString() : "—"}</span>
-                <span className="flex items-center gap-1 justify-self-end">
+                  <Link
+                    href={`/posts/${post._id}`}
+                    className="truncate pr-5 font-semibold text-[#173b9a] hover:underline"
+                  >
+                    {post.content}
+                  </Link>
+                  <span className="text-xs text-slate-400">{post.platform}</span>
+                  <span className="text-xs text-slate-400">{post.status}</span>
+                  <span>{(analytics?.likes ?? 0).toLocaleString()}</span>
+                  <span>{(analytics?.comments ?? 0).toLocaleString()}</span>
+                  <span>{(analytics?.shares ?? 0).toLocaleString()}</span>
+                  <span>{analytics?.reach !== undefined ? analytics.reach.toLocaleString() : "—"}</span>
+                  <span>{analytics?.impressions !== undefined ? analytics.impressions.toLocaleString() : "—"}</span>
+                  <span className="flex items-center gap-1 justify-self-end">
+                    {post.status === "Scheduled" && (
+                      <button
+                        type="button"
+                        title={t("cancelPost")}
+                        onClick={() => run(() => cancelPost({ postId: post._id }), t("cancelled"))}
+                        className="rounded-lg p-1.5 text-amber-600 hover:bg-amber-50"
+                      >
+                        <XCircle size={15} />
+                      </button>
+                    )}
+                    {post.status === "Failed" && (
+                      <button
+                        type="button"
+                        title={t("retryPost")}
+                        onClick={() => run(() => retryPost({ postId: post._id }), t("willRetry"))}
+                        className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50"
+                      >
+                        <RotateCcw size={15} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      title={t("deletePost")}
+                      onClick={() => {
+                        if (!window.confirm(t("deletePostConfirm"))) return;
+                        run(() => deletePost({ postId: post._id }), t("deleted"));
+                      }}
+                      className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100 md:hidden">
+            {posts.data.map(({ post, analytics }) => (
+              <div key={post._id} className="space-y-3 px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/posts/${post._id}`}
+                    className="min-w-0 flex-1 truncate font-semibold text-[#173b9a] hover:underline"
+                  >
+                    {post.content}
+                  </Link>
+                  <span className="shrink-0 text-xs text-slate-400">{post.platform}</span>
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  {post.status}
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-xs text-slate-500">
+                  <span>
+                    {t("likes")}: {(analytics?.likes ?? 0).toLocaleString()}
+                  </span>
+                  <span>
+                    {t("comments")}: {(analytics?.comments ?? 0).toLocaleString()}
+                  </span>
+                  <span>
+                    {t("shares")}: {(analytics?.shares ?? 0).toLocaleString()}
+                  </span>
+                  <span>
+                    {t("reach")}: {analytics?.reach !== undefined ? analytics.reach.toLocaleString() : "—"}
+                  </span>
+                  <span>
+                    {t("impressions")}:{" "}
+                    {analytics?.impressions !== undefined ? analytics.impressions.toLocaleString() : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
                   {post.status === "Scheduled" && (
                     <button
                       type="button"
@@ -182,11 +254,11 @@ function PostsTab({ teamId }: { teamId: Id<"teams"> | null }) {
                   >
                     <Trash2 size={15} />
                   </button>
-                </span>
+                </div>
               </div>
             ))}
           </div>
-        </div>
+        </>
       )}
     </section>
   );
