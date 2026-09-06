@@ -27,6 +27,7 @@ import { useFormatter, useTranslations } from "next-intl";
 interface PostAnalyticsProps {
   postId: Id<"posts">;
   userId: string;
+  isOwnPost: boolean;
 }
 
 const COMMENT_CATEGORY_TONE: Record<string, string> = {
@@ -38,7 +39,7 @@ const COMMENT_CATEGORY_TONE: Record<string, string> = {
   Other: "bg-slate-100 text-slate-600",
 };
 
-export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
+export function PostAnalytics({ postId, userId, isOwnPost }: PostAnalyticsProps) {
   const t = useTranslations("analytics");
   const formatter = useFormatter();
   const {
@@ -175,23 +176,25 @@ export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
               {t("detailDescription")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={!canRefresh}
-            className="inline-flex min-w-44 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#173b9a] shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:translate-y-0 disabled:bg-white/70 disabled:text-slate-500 disabled:shadow-none"
-          >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-            {refreshing
-              ? t("refreshing")
-              : cooldownRemaining > 0
-                ? cooldownRemaining >= 60 * 60 * 1000
-                  ? t("cooldownHour")
-                  : t("cooldownMinutes", {
-                      count: Math.max(1, Math.ceil(cooldownRemaining / 60_000)),
-                    })
-                : t("refresh")}
-          </button>
+          {isOwnPost && (
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={!canRefresh}
+              className="inline-flex min-w-44 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#173b9a] shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:translate-y-0 disabled:bg-white/70 disabled:text-slate-500 disabled:shadow-none"
+            >
+              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              {refreshing
+                ? t("refreshing")
+                : cooldownRemaining > 0
+                  ? cooldownRemaining >= 60 * 60 * 1000
+                    ? t("cooldownHour")
+                    : t("cooldownMinutes", {
+                        count: Math.max(1, Math.ceil(cooldownRemaining / 60_000)),
+                      })
+                  : t("refresh")}
+            </button>
+          )}
         </div>
       </section>
 
@@ -309,7 +312,7 @@ export function PostAnalytics({ postId, userId }: PostAnalyticsProps) {
         </>
       )}
 
-      <PostComments postId={postId} userId={userId} />
+      <PostComments postId={postId} userId={userId} isOwnPost={isOwnPost} />
     </div>
   );
 }

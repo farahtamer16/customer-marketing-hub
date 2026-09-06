@@ -18,10 +18,16 @@ export default function CommentList({
   comments,
   posts,
   embedded = false,
+  useAdminDelete = false,
 }: {
   comments: Doc<"comments">[];
   posts: Doc<"posts">[];
   embedded?: boolean;
+  // True when these comments belong to someone else's post (viewed via
+  // Content Studio / another teammate's post detail page) — deleteComment
+  // is owner-only and would reject the viewer, so deleteCommentAdmin
+  // (gated by manageTeam instead of ownership) is used in that case.
+  useAdminDelete?: boolean;
 }) {
   const t = useTranslations("comments");
   const user = useQuery(api.users.current);
@@ -31,6 +37,7 @@ export default function CommentList({
   );
   const createTask = useMutation(api.followUpTasks.createFollowUpTask);
   const deleteComment = useMutation(api.comments.deleteComment);
+  const deleteCommentAdmin = useMutation(api.comments.deleteCommentAdmin);
   const [pendingId, setPendingId] = useState<Id<"comments"> | null>(null);
 
   const handleConvert = useCallback(
@@ -58,13 +65,17 @@ export default function CommentList({
   const handleDelete = useCallback(
     async (commentId: Id<"comments">) => {
       try {
-        await deleteComment({ commentId });
+        if (useAdminDelete) {
+          await deleteCommentAdmin({ commentId });
+        } else {
+          await deleteComment({ commentId });
+        }
         toast.success(t("deleted"));
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t("deleteFailed"));
       }
     },
-    [deleteComment, t],
+    [deleteComment, deleteCommentAdmin, useAdminDelete, t],
   );
 
   return (

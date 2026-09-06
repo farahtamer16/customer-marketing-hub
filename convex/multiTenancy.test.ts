@@ -545,3 +545,51 @@ describe("consumerJourney.ts vendor-admin gate (the permission leak fix)", () =>
     expect(await t.query(api.users.amIVendorAdmin, {})).toBe(false);
   });
 });
+
+describe("comments.getCommentsForPost (now workspace-scoped, was fully open before)", () => {
+  test("same-workspace teammate can read a post's comments; cross-workspace and unauthenticated cannot", async () => {
+    const t = convexTest(schema);
+    const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+    const bob = t.withIdentity(identity("bob_sub", "bob@b.com", "Bob"));
+    const { workspaceId: wsA } = await alice.mutation(api.workspaces.createWorkspace, {
+      name: "A",
+      intent: "workspace",
+    });
+    await bob.mutation(api.workspaces.createWorkspace, { name: "B", intent: "workspace" });
+
+    // A teammate of alice's, in the same workspace, who didn't author the post.
+    await t.run((ctx) =>
+      ctx.db.insert("teamMembers", {
+        workspaceId: wsA,
+        clerkUserId: "carol_sub",
+        name: "Carol",
+        email: "carol@a.com",
+        role: "marketingManager",
+        status: "active",
+        createdAt: Date.now(),
+      }),
+    );
+    const carol = t.withIdentity(identity("carol_sub", "carol@a.com", "Carol"));
+
+    const postId = await alice.mutation(api.posts.schedulePost, {
+      platform: "Facebook",
+      content: "Alice's post",
+      scheduledAt: Date.now() + 60_000,
+    });
+    await alice.mutation(api.comments.createComment, {
+      targetUrl: "https://example.com/alice-post",
+      authorName: "Someone",
+      content: "Great post",
+      platform: "facebook",
+    });
+
+    const asCarol = await carol.query(api.comments.getCommentsForPost, { postId });
+    expect(Array.isArray(asCarol)).toBe(true);
+
+    const asBob = await bob.query(api.comments.getCommentsForPost, { postId });
+    expect(asBob).toEqual([]);
+
+    const asAnon = await t.query(api.comments.getCommentsForPost, { postId });
+    expect(asAnon).toEqual([]);
+  });
+});

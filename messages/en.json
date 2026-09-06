@@ -347,6 +347,7 @@
     "cooldownHour": "Available in 1 hour",
     "cooldownMinutes": "Available in {count} min",
     "loadingUser": "Loading user…",
+    "notFound": "This post could not be found.",
     "commentsTitle": "Comments",
     "fetchComments": "Fetch Comments",
     "fetchingComments": "Fetching comments…",

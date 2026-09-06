@@ -63,9 +63,22 @@ export const storeComments = mutation({
   },
 });
 
+// Readable by anyone in the same workspace as the post (not just its
+// author) — the post detail page shows a teammate's comments the same way
+// it shows their analytics, matching analytics.ts's
+// assertPostReadableByCaller. Used to have no check at all.
 export const getCommentsForPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const post = await ctx.db.get(args.postId);
+    if (!post) return [];
+    const self = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    if (!self || post.workspaceId !== self.workspaceId) return [];
     return await ctx.db
       .query("comments")
       .withIndex("by_postId", (q) => q.eq("postId", args.postId))

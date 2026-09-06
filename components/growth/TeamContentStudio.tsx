@@ -137,7 +137,12 @@ function PostsTab({ teamId }: { teamId: Id<"teams"> | null }) {
                 key={post._id}
                 className="grid grid-cols-[2fr_1fr_1fr_repeat(5,1fr)_auto] items-center px-6 py-4 text-sm text-slate-600 odd:bg-white/35"
               >
-                <span className="truncate pr-5 font-semibold text-[#173b9a]">{post.content}</span>
+                <Link
+                  href={`/posts/${post._id}`}
+                  className="truncate pr-5 font-semibold text-[#173b9a] hover:underline"
+                >
+                  {post.content}
+                </Link>
                 <span className="text-xs text-slate-400">{post.platform}</span>
                 <span className="text-xs text-slate-400">{post.status}</span>
                 <span>{(analytics?.likes ?? 0).toLocaleString()}</span>

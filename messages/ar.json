@@ -347,6 +347,7 @@
     "cooldownHour": "متاح خلال ساعة واحدة",
     "cooldownMinutes": "متاح خلال {count} دقيقة",
     "loadingUser": "جارٍ تحميل المستخدم…",
+    "notFound": "تعذّر العثور على هذا المنشور.",
     "commentsTitle": "التعليقات",
     "fetchComments": "جلب التعليقات",
     "fetchingComments": "جارٍ جلب التعليقات…",

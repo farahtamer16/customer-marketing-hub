@@ -28,10 +28,12 @@ export default function PostDetail({
   post,
   comments,
   userId,
+  isOwnPost,
 }: {
   post: Doc<"posts">;
   comments: Doc<"comments">[];
   userId: string;
+  isOwnPost: boolean;
 }) {
   const t = useTranslations("posts");
   const commentT = useTranslations("comments");
@@ -99,7 +101,7 @@ export default function PostDetail({
         </div>
       </section>
 
-      <PostAnalytics postId={post._id} userId={userId} />
+      <PostAnalytics postId={post._id} userId={userId} isOwnPost={isOwnPost} />
 
       <section>
         <div className="mb-4 flex items-start gap-3 px-1">
@@ -115,7 +117,12 @@ export default function PostDetail({
             </p>
           </div>
         </div>
-        <CommentList comments={comments} posts={[post]} embedded />
+        <CommentList
+          comments={comments}
+          posts={[post]}
+          embedded
+          useAdminDelete={!isOwnPost}
+        />
       </section>
     </div>
   );
