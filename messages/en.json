@@ -1302,7 +1302,14 @@
       "sentTo": "Sent to {email}",
       "history": "Recently sent",
       "historyLine": "{email} — {date}",
-      "failed": "Failed to generate content"
+      "failed": "Failed to generate content",
+      "status": {
+        "delivered": "Delivered",
+        "opened": "Opened",
+        "clicked": "Clicked",
+        "bounced": "Bounced",
+        "complained": "Marked as spam"
+      }
     },
     "leads": {
       "eyebrow": "People intelligence",

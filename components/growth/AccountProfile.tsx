@@ -338,12 +338,26 @@ export default function AccountProfile({
               </button>
             </div>
             {lastOutreach && (
-              <p className="mt-3 text-xs text-blue-100">
-                {t("accountDetail.lastContacted", {
-                  email: lastOutreach.toEmail,
-                  date: format.dateTime(lastOutreach.sentAt, { dateStyle: "medium" }),
-                })}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="text-xs text-blue-100">
+                  {t("accountDetail.lastContacted", {
+                    email: lastOutreach.toEmail,
+                    date: format.dateTime(lastOutreach.sentAt, { dateStyle: "medium" }),
+                  })}
+                </p>
+                {lastOutreach.deliveryStatus && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[0.62rem] font-bold ${
+                      lastOutreach.deliveryStatus === "bounced" ||
+                      lastOutreach.deliveryStatus === "complained"
+                        ? "bg-rose-500/20 text-rose-100"
+                        : "bg-white/20 text-white"
+                    }`}
+                  >
+                    {t(`outreach.status.${lastOutreach.deliveryStatus}`)}
+                  </span>
+                )}
+              </div>
             )}
           </article>
 

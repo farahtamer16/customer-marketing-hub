@@ -108,6 +108,54 @@ export const sendOutreachEmail = action({
   },
 });
 
+// Higher rank wins on a race between out-of-order webhook deliveries — a
+// late "delivered" event should never downgrade an already-recorded
+// "opened". bounced/complained rank highest since they're the outcome most
+// worth surfacing regardless of what else already happened.
+const DELIVERY_STATUS_RANK: Record<string, number> = {
+  delivered: 1,
+  opened: 2,
+  clicked: 3,
+  bounced: 4,
+  complained: 4,
+};
+
+// Called from convex/http.ts's Resend webhook handler — that endpoint has
+// already verified the request's svix signature before this ever runs, so
+// there's no separate auth check here, same as any other internal-only
+// mutation reachable solely from trusted server code.
+export const recordEvent = internalMutation({
+  args: {
+    resendId: v.string(),
+    status: v.union(
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("complained"),
+    ),
+    occurredAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const email = await ctx.db
+      .query("outreachEmails")
+      .withIndex("by_resendId", (q) => q.eq("resendId", args.resendId))
+      .unique();
+    // Not one of ours (a different Resend project's traffic sharing the
+    // same account) or the event beat logSent's own write — either way,
+    // nothing to update.
+    if (!email) return;
+
+    const currentRank = email.deliveryStatus ? DELIVERY_STATUS_RANK[email.deliveryStatus] : 0;
+    if (DELIVERY_STATUS_RANK[args.status] < currentRank) return;
+
+    await ctx.db.patch(email._id, {
+      deliveryStatus: args.status,
+      deliveryStatusAt: args.occurredAt,
+    });
+  },
+});
+
 // Real send history for an account — what the "last contacted" line on the
 // account profile reads from.
 export const listForAccount = query({

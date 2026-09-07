@@ -550,9 +550,25 @@ export default defineSchema({
     sentBy: v.string(),
     sentAt: v.number(),
     resendId: v.optional(v.string()),
+    // Populated by Resend's delivery webhook (convex/http.ts) as events
+    // arrive — absent until the first webhook event lands, since Resend
+    // fires these asynchronously after the send call already returned.
+    // Only ever moves "forward" (see outreach.recordEvent's ranking), so
+    // this always reflects the most meaningful thing that's happened.
+    deliveryStatus: v.optional(
+      v.union(
+        v.literal("delivered"),
+        v.literal("opened"),
+        v.literal("clicked"),
+        v.literal("bounced"),
+        v.literal("complained"),
+      ),
+    ),
+    deliveryStatusAt: v.optional(v.number()),
   })
     .index("by_accountId", ["accountId"])
-    .index("by_workspaceId", ["workspaceId"]),
+    .index("by_workspaceId", ["workspaceId"])
+    .index("by_resendId", ["resendId"]),
 
   consumerVisitors: defineTable({
     visitorId: v.string(),

@@ -1302,7 +1302,14 @@
       "sentTo": "أُرسل إلى {email}",
       "history": "أُرسلت مؤخرًا",
       "historyLine": "{email} — {date}",
-      "failed": "تعذّر إنشاء المحتوى"
+      "failed": "تعذّر إنشاء المحتوى",
+      "status": {
+        "delivered": "تم التسليم",
+        "opened": "تم الفتح",
+        "clicked": "تم النقر",
+        "bounced": "مرتد",
+        "complained": "أُبلغ عنه كسبام"
+      }
     },
     "leads": {
       "eyebrow": "ذكاء الأشخاص",

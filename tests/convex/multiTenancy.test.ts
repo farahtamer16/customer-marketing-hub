@@ -594,6 +594,70 @@ describe("comments.getCommentsForPost (now workspace-scoped, was fully open befo
   });
 });
 
+describe("outreach.recordEvent (Resend delivery webhook)", () => {
+  test("updates deliveryStatus, never downgrades on an out-of-order event, and no-ops for an unknown resendId", async () => {
+    const t = convexTest(schema);
+    const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+    await alice.mutation(api.workspaces.createWorkspace, { name: "A", intent: "workspace" });
+
+    const accountId = await alice.mutation(api.growth.createAccount, {
+      name: "Acme",
+      domain: "acme.com",
+      industry: "Software",
+      employees: 100,
+      tier: "midMarket",
+      stage: "discover",
+      owner: "Alice",
+      pipelineValue: 10000,
+      ltv: 50000,
+    });
+
+    // Seeded the way sendOutreachEmail's own logSent call does, without
+    // going through the action itself (which would need a real network
+    // call to Resend).
+    await t.mutation(internal.outreach.logSent, {
+      accountId,
+      memberId: "m1",
+      toEmail: "dana@acme.com",
+      subject: "Hi",
+      body: "Hi there",
+      sentBy: "alice_sub",
+      resendId: "resend_evt_1",
+    });
+
+    // An event for a resendId that isn't ours (or arrived before logSent
+    // committed) — no matching row, must not throw.
+    await t.mutation(internal.outreach.recordEvent, {
+      resendId: "resend_evt_unknown",
+      status: "delivered",
+      occurredAt: Date.now(),
+    });
+
+    await t.mutation(internal.outreach.recordEvent, {
+      resendId: "resend_evt_1",
+      status: "delivered",
+      occurredAt: 1000,
+    });
+    await t.mutation(internal.outreach.recordEvent, {
+      resendId: "resend_evt_1",
+      status: "opened",
+      occurredAt: 2000,
+    });
+    // A late-arriving "delivered" must not downgrade the already-recorded
+    // "opened" — webhook delivery order isn't guaranteed.
+    await t.mutation(internal.outreach.recordEvent, {
+      resendId: "resend_evt_1",
+      status: "delivered",
+      occurredAt: 3000,
+    });
+
+    const history = await alice.query(api.outreach.listForAccount, { accountId });
+    expect(history).toHaveLength(1);
+    expect(history[0].deliveryStatus).toBe("opened");
+    expect(history[0].deliveryStatusAt).toBe(2000);
+  });
+});
+
 describe("growth.removeMember / growth.deleteAccount", () => {
   test("removeMember drops the member and recomputes scores; deleteAccount actually deletes the row; both refuse cross-tenant", async () => {
     const t = convexTest(schema);
