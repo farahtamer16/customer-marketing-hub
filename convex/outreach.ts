@@ -3,6 +3,19 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireInWorkspace, requirePermission } from "./authz";
 
+// Resend's open/click tracking works by injecting an invisible pixel/link
+// rewrite into the email's HTML body — a text-only send has no HTML for it
+// to go into, so opens can never be detected regardless of any dashboard
+// setting. Escaped for HTML, with newlines turned into <br> since the
+// draft is plain text (from PersonalizeOutreachDialog's textarea).
+function toSimpleHtml(body: string): string {
+  const escaped = body
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<div>${escaped.split("\n").map((line) => line || "&nbsp;").join("<br>")}</div>`;
+}
+
 // Reuses the canonical permission table in authz.ts rather than duplicating
 // it — an internalQuery so an action (which has no ctx.db of its own) can
 // still run the same check via ctx.runQuery, with identity propagating
@@ -87,6 +100,7 @@ export const sendOutreachEmail = action({
         to: member.email,
         subject: args.subject,
         text: args.body,
+        html: toSimpleHtml(args.body),
       }),
     });
     const data = await response.json();
