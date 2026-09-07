@@ -38,13 +38,31 @@ export const createWorkspace = mutation({
       .unique();
     if (existing) throw new Error("You already belong to a workspace");
 
+    const email = identity.email ?? "";
+
+    // Clerk enforces unique emails per instance, so a row with this email
+    // but a clerkUserId other than this identity's can only be a stale
+    // leftover — most commonly, someone deleted their Clerk account and is
+    // now signing back up with the same email. Nothing else in this table
+    // is scoped by email in a way that depends on it being that old row
+    // specifically, so it's safe to clear before inserting the real one —
+    // this is what keeps the by_email lookups above never seeing more than
+    // one match in steady state.
+    if (email) {
+      const stale = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .collect();
+      for (const row of stale) {
+        await ctx.db.delete(row._id);
+      }
+    }
+
     const workspaceId = await ctx.db.insert("workspaces", {
       name,
       createdBy: identity.subject,
       createdAt: Date.now(),
     });
-
-    const email = identity.email ?? "";
     const memberId = await ctx.db.insert("teamMembers", {
       clerkUserId: identity.subject,
       workspaceId,
@@ -165,5 +183,41 @@ export const getAutoReplySettingsInternal = internalQuery({
   handler: async (ctx, args) => {
     const workspace = await ctx.db.get(args.workspaceId);
     return workspace?.autoReply ?? DEFAULT_AUTO_REPLY;
+  },
+});
+
+// One-time cleanup for data that predates createWorkspace's own self-heal
+// (see the comment there): if someone deleted their Clerk account and
+// signed back up with the same email before that fix landed, two
+// teamMembers rows are left sharing an email, which crashes every
+// .unique()-on-by_email lookup — needsOnboardingChoice/ensureCurrentMember
+// included, so the affected person can't even sign back in. For each email
+// with more than one row, keeps the most recently created one (almost
+// always the real, currently-usable account) and deletes the rest.
+// Run once via `npx convex run workspaces:dedupeTeamMembersByEmail`.
+export const dedupeTeamMembersByEmail = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("teamMembers").collect();
+    const byEmail = new Map<string, typeof all>();
+    for (const row of all) {
+      if (!row.email) continue;
+      const group = byEmail.get(row.email) ?? [];
+      group.push(row);
+      byEmail.set(row.email, group);
+    }
+
+    const deleted: { email: string; keptId: string; deletedIds: string[] }[] = [];
+    for (const [email, rows] of byEmail) {
+      if (rows.length < 2) continue;
+      const sorted = [...rows].sort((a, b) => b._creationTime - a._creationTime);
+      const [keep, ...rest] = sorted;
+      for (const row of rest) {
+        await ctx.db.delete(row._id);
+      }
+      deleted.push({ email, keptId: keep._id, deletedIds: rest.map((r) => r._id) });
+    }
+
+    return { duplicateEmailsFound: deleted.length, deleted };
   },
 });

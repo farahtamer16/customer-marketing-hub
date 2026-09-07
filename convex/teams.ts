@@ -190,10 +190,14 @@ export const createTeamMember = mutation({
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "manageTeam");
 
+    // .first(), not .unique() — two rows can transiently share an email if
+    // someone deleted their Clerk account and re-signed up before the
+    // stale row got cleaned up (see workspaces.createWorkspace); erroring
+    // out here is still correct, just shouldn't crash finding out why.
     const existingByEmail = await ctx.db
       .query("teamMembers")
       .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
+      .first();
     if (existingByEmail) throw new Error("A member with this email already exists");
 
     if (args.teamId) {

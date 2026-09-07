@@ -53,10 +53,17 @@ export const needsOnboardingChoice = query({
 
     const email = identity.email ?? "";
     if (email) {
+      // .first() rather than .unique(): Clerk enforces unique emails per
+      // instance, so two rows sharing an email should never happen in
+      // steady state — but it can, transiently, if someone deletes their
+      // Clerk account and signs back up with the same email before the
+      // stale row here gets cleaned up (createWorkspace self-heals this on
+      // the next successful signup). A stuck sign-in is a worse failure
+      // than picking one of two rows, so degrade instead of throwing.
       const invited = await ctx.db
         .query("teamMembers")
         .withIndex("by_email", (q) => q.eq("email", email))
-        .unique();
+        .first();
       if (invited && !invited.clerkUserId) return false;
     }
 
@@ -102,10 +109,12 @@ export const ensureCurrentMember = mutation({
     }
 
     if (email) {
+      // .first(), not .unique() — see needsOnboardingChoice's comment above
+      // on why two rows can transiently share an email.
       const invited = await ctx.db
         .query("teamMembers")
         .withIndex("by_email", (q) => q.eq("email", email))
-        .unique();
+        .first();
       if (invited && !invited.clerkUserId) {
         await ctx.db.patch(invited._id, {
           clerkUserId: identity.subject,

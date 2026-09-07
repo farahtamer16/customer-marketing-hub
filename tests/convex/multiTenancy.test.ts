@@ -82,6 +82,87 @@ describe("multi-tenant workspace isolation", () => {
     );
   });
 
+  test("createWorkspace self-heals a stale same-email row left behind by a deleted Clerk account", async () => {
+    // Reproduces a real bug report: sign up, delete the Clerk account
+    // (nothing in this app cleans up the now-orphaned teamMembers row),
+    // sign back up with the same email — Clerk enforces unique emails, so
+    // that always means a brand-new clerkUserId. Before the fix,
+    // createWorkspace only checked by_clerkUserId, so it happily inserted a
+    // second row sharing the email, and every .unique()-on-by_email lookup
+    // downstream (needsOnboardingChoice, ensureCurrentMember) started
+    // throwing "unique() query returned more than one result" — a
+    // sign-in-breaking crash for that person.
+    const t = convexTest(schema);
+    const aliceOld = t.withIdentity(identity("alice_sub_old", "alice@a.com", "Alice"));
+    await aliceOld.mutation(api.workspaces.createWorkspace, {
+      name: "Alice Co",
+      intent: "workspace",
+    });
+    // ...Clerk account deleted here; the row above is left untouched.
+
+    const aliceNew = t.withIdentity(identity("alice_sub_new", "alice@a.com", "Alice"));
+    const result = await aliceNew.mutation(api.workspaces.createWorkspace, {
+      name: "Alice Co Again",
+      intent: "workspace",
+    });
+    expect(result.workspaceId).toBeDefined();
+
+    const byEmail = await t.run((ctx) =>
+      ctx.db
+        .query("teamMembers")
+        .withIndex("by_email", (q) => q.eq("email", "alice@a.com"))
+        .collect(),
+    );
+    expect(byEmail).toHaveLength(1);
+    expect(byEmail[0].clerkUserId).toBe("alice_sub_new");
+
+    // The exact crash from the bug report — must resolve, not throw.
+    await expect(aliceNew.query(api.team.needsOnboardingChoice, {})).resolves.toBe(false);
+  });
+
+  test("dedupeTeamMembersByEmail cleans up rows that predate the self-heal fix, keeping the newest", async () => {
+    const t = convexTest(schema);
+    const workspaceId = await t.run((ctx) =>
+      ctx.db.insert("workspaces", { name: "W", createdBy: "x", createdAt: Date.now() }),
+    );
+    const oldId = await t.run((ctx) =>
+      ctx.db.insert("teamMembers", {
+        workspaceId,
+        clerkUserId: "old_sub",
+        name: "Old Alice",
+        email: "dup@a.com",
+        role: "ownerAdmin",
+        status: "active",
+        createdAt: Date.now(),
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const newId = await t.run((ctx) =>
+      ctx.db.insert("teamMembers", {
+        workspaceId,
+        clerkUserId: "new_sub",
+        name: "New Alice",
+        email: "dup@a.com",
+        role: "ownerAdmin",
+        status: "active",
+        createdAt: Date.now(),
+      }),
+    );
+
+    const result = await t.mutation(internal.workspaces.dedupeTeamMembersByEmail, {});
+    expect(result.duplicateEmailsFound).toBe(1);
+
+    const remaining = await t.run((ctx) =>
+      ctx.db
+        .query("teamMembers")
+        .withIndex("by_email", (q) => q.eq("email", "dup@a.com"))
+        .collect(),
+    );
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]._id).toEqual(newId);
+    expect(await t.run((ctx) => ctx.db.get(oldId))).toBeNull();
+  });
+
   test("cross-tenant isolation: workspace A cannot read, write, or enumerate workspace B's data", async () => {
     const t = convexTest(schema);
     const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
