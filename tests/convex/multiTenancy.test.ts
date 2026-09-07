@@ -879,6 +879,19 @@ describe("autoReply.ts (AI auto-reply to comments)", () => {
       const attempted = stored.find((c) => c.platformCommentId === "fb_comment_unconnected");
       expect(attempted?.autoReply?.status).toBe("failed");
       expect(attempted?.autoReply?.error).toMatch(/not connected/i);
+
+      // The audit view (comments.listAutoReplyActivity) is how anyone
+      // actually finds out this failed — confirm it shows up there, and
+      // that it's workspace-scoped like everything else.
+      const aliceActivity = await alice.query(api.comments.listAutoReplyActivity, {});
+      expect(
+        aliceActivity.find((entry) => entry._id === attempted?._id)?.autoReply.status,
+      ).toBe("failed");
+
+      const bob = t.withIdentity(identity("bob_sub", "bob@b.com", "Bob"));
+      await bob.mutation(api.workspaces.createWorkspace, { name: "B", intent: "workspace" });
+      const bobActivity = await bob.query(api.comments.listAutoReplyActivity, {});
+      expect(bobActivity).toEqual([]);
     } finally {
       vi.useRealTimers();
     }

@@ -440,7 +440,12 @@
     "autoReplySave": "Save",
     "autoReplySaved": "Auto-reply settings saved.",
     "autoReplySaveFailed": "Could not save auto-reply settings.",
-    "autoReplyLoading": "Loading auto-reply settings…"
+    "autoReplyLoading": "Loading auto-reply settings…",
+    "autoReplyActivityTitle": "Recent auto-replies",
+    "autoReplyActivityHint": "The last {count, plural, =1 {reply} other {replies}} auto-reply actually attempted, so you can see what's working.",
+    "autoReplySent": "Sent",
+    "autoReplyFailedLabel": "Failed",
+    "autoReplyViewPost": "View post"
   },
   "calendar": {
     "eyebrow": "Publishing",

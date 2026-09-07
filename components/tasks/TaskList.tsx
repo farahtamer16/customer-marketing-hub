@@ -11,6 +11,7 @@ import PageHeader from "@/components/hub/PageHeader";
 import LoadingState from "@/components/ui/LoadingState";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import AutoReplyActivity from "./AutoReplyActivity";
 import AutoReplySettings from "./AutoReplySettings";
 import TaskItem from "./TaskItem";
 import { useTranslations } from "next-intl";
@@ -44,6 +45,7 @@ export default function TaskList() {
       />
 
       <AutoReplySettings />
+      <AutoReplyActivity />
 
       {user === undefined || (user && tasks === undefined) ? (
         <LoadingState label={t("loading")} />

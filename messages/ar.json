@@ -440,7 +440,12 @@
     "autoReplySave": "حفظ",
     "autoReplySaved": "تم حفظ إعدادات الرد التلقائي.",
     "autoReplySaveFailed": "تعذّر حفظ إعدادات الرد التلقائي.",
-    "autoReplyLoading": "جارٍ تحميل إعدادات الرد التلقائي…"
+    "autoReplyLoading": "جارٍ تحميل إعدادات الرد التلقائي…",
+    "autoReplyActivityTitle": "أحدث الردود التلقائية",
+    "autoReplyActivityHint": "آخر {count, plural, =1 {رد} =2 {ردَّين} other {# ردود}} تلقائي تمت محاولته فعليًا، لتتمكن من رؤية ما ينجح.",
+    "autoReplySent": "أُرسل",
+    "autoReplyFailedLabel": "فشل",
+    "autoReplyViewPost": "عرض المنشور"
   },
   "calendar": {
     "eyebrow": "النشر",

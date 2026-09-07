@@ -283,6 +283,37 @@ export const getCommentsForTeamAdmin = query({
   },
 });
 
+// Auto-reply runs fully automatically with no per-comment human approval
+// (see autoReply.ts), so this is the only place anyone can see whether it's
+// actually working — what got replied to, what failed, and why. Any team
+// member can see it, matching getAutoReplySettings' own visibility.
+export const listAutoReplyActivity = query({
+  args: {},
+  handler: async (ctx) => {
+    const actor = await requireMember(ctx);
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_workspaceId", (q) => q.eq("workspaceId", actor.workspaceId))
+      .collect();
+    return comments
+      .filter(
+        (comment): comment is typeof comment & { autoReply: NonNullable<typeof comment.autoReply> } =>
+          comment.autoReply !== undefined,
+      )
+      .sort((a, b) => b.autoReply.repliedAt - a.autoReply.repliedAt)
+      .slice(0, 30)
+      .map((comment) => ({
+        _id: comment._id,
+        postId: comment.postId,
+        authorName: comment.authorName,
+        content: comment.content,
+        classification: comment.classification,
+        platform: comment.platform,
+        autoReply: comment.autoReply,
+      }));
+  },
+});
+
 async function requireOwnComment(ctx: MutationCtx, commentId: Id<"comments">) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Not authenticated");
