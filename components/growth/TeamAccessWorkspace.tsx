@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Activity,
   ClipboardList,
+  Mail,
   Plus,
   ShieldCheck,
   UserCheck,
@@ -54,6 +55,7 @@ export default function TeamAccessWorkspace() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [tasksTeam, setTasksTeam] = useState<{ id: Id<"teams">; name: string } | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const rows = useMemo(
     () =>
       members.filter((member) => {
@@ -195,6 +197,46 @@ export default function TeamAccessWorkspace() {
             >
               <Activity size={15} />
             </button>
+            {!row.original.lastActive && (
+              <button
+                type="button"
+                disabled={resendingId === row.original.id}
+                onClick={async (event) => {
+                  event.stopPropagation();
+                  if (!window.confirm(t("team.resendInviteConfirm", { name: row.original.name })))
+                    return;
+                  setResendingId(row.original.id);
+                  try {
+                    const response = await fetch("/api/team/resend-invite", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ memberId: row.original.id }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error ?? t("team.resendInviteFailed"));
+                    if (data.emailSent) {
+                      toast.success(t("team.resendInviteSent"));
+                    } else {
+                      toast.success(
+                        t("team.resendInviteSentNoEmail", { password: data.temporaryPassword }),
+                        { duration: 15000 },
+                      );
+                    }
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : t("team.resendInviteFailed"),
+                    );
+                  } finally {
+                    setResendingId(null);
+                  }
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-[#173b9a] disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={t("team.resendInvite", { name: row.original.name })}
+                title={t("team.resendInvite", { name: row.original.name })}
+              >
+                <Mail size={15} />
+              </button>
+            )}
             <button
               type="button"
               onClick={async (event) => {
@@ -224,7 +266,7 @@ export default function TeamAccessWorkspace() {
         ),
       },
     ],
-    [assignMemberToTeam, format, router, t, teams, updateMemberRole],
+    [assignMemberToTeam, format, resendingId, router, t, teams, updateMemberRole],
   );
   const active = members.filter((member) => member.status === "active").length;
   const invited = members.filter(
