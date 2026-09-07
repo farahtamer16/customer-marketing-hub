@@ -594,6 +594,75 @@ describe("comments.getCommentsForPost (now workspace-scoped, was fully open befo
   });
 });
 
+describe("growth.removeMember / growth.deleteAccount", () => {
+  test("removeMember drops the member and recomputes scores; deleteAccount actually deletes the row; both refuse cross-tenant", async () => {
+    const t = convexTest(schema);
+    const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+    await alice.mutation(api.workspaces.createWorkspace, { name: "A", intent: "workspace" });
+
+    const accountId = await alice.mutation(api.growth.createAccount, {
+      name: "Acme",
+      domain: "acme.com",
+      industry: "Software",
+      employees: 100,
+      tier: "midMarket",
+      stage: "discover",
+      owner: "Alice",
+      pipelineValue: 10000,
+      ltv: 50000,
+    });
+
+    await alice.mutation(api.growth.addMember, {
+      accountId,
+      member: {
+        id: "m1",
+        name: "Dana",
+        title: "CTO",
+        role: "decisionMaker",
+        email: "dana@acme.com",
+        status: "active",
+      },
+    });
+    await alice.mutation(api.growth.addMember, {
+      accountId,
+      member: {
+        id: "m2",
+        name: "Eli",
+        title: "PM",
+        role: "champion",
+        email: "eli@acme.com",
+        status: "active",
+      },
+    });
+
+    let account = await alice.query(api.growth.getAccount, { accountId });
+    expect(account?.members.map((m) => m.id)).toEqual(["m1", "m2"]);
+
+    // Cross-tenant: bob cannot remove a member from alice's account.
+    const bob = t.withIdentity(identity("bob_sub", "bob@b.com", "Bob"));
+    await bob.mutation(api.workspaces.createWorkspace, { name: "B", intent: "workspace" });
+    await expect(
+      bob.mutation(api.growth.removeMember, { accountId, memberId: "m1" }),
+    ).rejects.toThrow(/not found/i);
+
+    // Same-tenant: actually removes the member and recomputes scores.
+    await alice.mutation(api.growth.removeMember, { accountId, memberId: "m1" });
+    account = await alice.query(api.growth.getAccount, { accountId });
+    expect(account?.members.map((m) => m.id)).toEqual(["m2"]);
+    expect(account?.buyingGroupCoverage).toBeDefined();
+
+    // Cross-tenant delete is refused too (also covered in the isolation
+    // test above, repeated here for locality with the removeMember case).
+    await expect(
+      bob.mutation(api.growth.deleteAccount, { accountId }),
+    ).rejects.toThrow(/not found/i);
+
+    // Same-tenant delete actually deletes the row.
+    await alice.mutation(api.growth.deleteAccount, { accountId });
+    expect(await alice.query(api.growth.getAccount, { accountId })).toBeNull();
+  });
+});
+
 describe("autoReply.ts (AI auto-reply to comments)", () => {
   test("updateAutoReplySettings is manageWorkspace-gated and workspace-scoped", async () => {
     const t = convexTest(schema);
@@ -767,6 +836,49 @@ describe("autoReply.ts (AI auto-reply to comments)", () => {
       const attempted = stored.find((c) => c.platformCommentId === "fb_comment_3");
       expect(attempted?.autoReply?.status).toBe("failed");
       expect(attempted?.autoReply?.error).toMatch(/GOOGLE_GENERATIVE_AI_API_KEY/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("maybeAutoReply records a failure, never throws, when the platform isn't connected for the post's owner", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = convexTest(schema);
+      const alice = t.withIdentity(identity("alice_sub", "alice@a.com", "Alice"));
+      await alice.mutation(api.workspaces.createWorkspace, { name: "A", intent: "workspace" });
+
+      // No socialAccounts row at all — unlike the earlier test, this account
+      // was never connected.
+      const postId = await alice.mutation(api.posts.schedulePost, {
+        platform: "Facebook",
+        content: "Alice's post",
+        scheduledAt: Date.now() + 60_000,
+      });
+      await alice.mutation(api.workspaces.updateAutoReplySettings, {
+        enabled: true,
+        classifications: ["Lead"],
+      });
+
+      await alice.mutation(api.comments.storeComments, {
+        comments: [
+          {
+            postId,
+            authorName: "Real Lead",
+            content: "I'd like a demo",
+            platform: "facebook",
+            classification: "Lead",
+            scrapedAt: Date.now(),
+            platformCommentId: "fb_comment_unconnected",
+          },
+        ],
+      });
+      await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+
+      const stored = await alice.query(api.comments.getCommentsForPost, { postId });
+      const attempted = stored.find((c) => c.platformCommentId === "fb_comment_unconnected");
+      expect(attempted?.autoReply?.status).toBe("failed");
+      expect(attempted?.autoReply?.error).toMatch(/not connected/i);
     } finally {
       vi.useRealTimers();
     }
